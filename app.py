@@ -291,11 +291,15 @@ def main():
 
     current_sentence = df.iloc[current_idx]
 
+    # 현재 문장을 표시할 placeholder 생성 (전체 재생 시 업데이트용)
+    current_sentence_display = st.empty()
+    current_translation_display = st.empty()
+
     # 현재 문장 큰 글씨로 표시
-    st.markdown(f"### {current_sentence['English']}")
+    current_sentence_display.markdown(f"### {current_sentence['English']}")
 
     if st.session_state.show_translation:
-        st.markdown(f"*{current_sentence['Korean']}*")
+        current_translation_display.markdown(f"*{current_sentence['Korean']}*")
 
     # 이 문장의 통계
     sentence_stats = get_sentence_stats(current_idx)
@@ -433,31 +437,59 @@ def main():
 
     with col5:
         if st.button("전체 재생 ⏯️", use_container_width=True):
+            # 개별 반복 모드인 경우 전체 루프 반복 횟수 적용
+            total_loops = st.session_state.target_repeats if st.session_state.repeat_mode == "개별 반복" else 1
+
             # 진행 상황 표시용 placeholder
             play_progress = st.empty()
             audio_container = st.container()
 
-            for idx, row in df.iterrows():
-                # 같은 위치에 현재 재생 중인 문장 표시
-                play_progress.info(f"🔊 **{idx + 1}/{len(df)}. {row['English']}**")
+            # 전체 문장을 total_loops 번 반복
+            for loop_idx in range(total_loops):
+                # 전체 문장 재생
+                for idx, row in df.iterrows():
+                    # 화면 최상단의 현재 문장 표시 영역 업데이트
+                    current_sentence_display.markdown(f"### {row['English']}")
+                    if st.session_state.show_translation and row['Korean']:
+                        current_translation_display.markdown(f"*{row['Korean']}*")
+                    else:
+                        current_translation_display.empty()
 
-                # 각 문장마다 새로운 placeholder 사용
-                with audio_container:
-                    audio_placeholder = st.empty()
-                    play_audio_with_stats(
-                        row['English'],
-                        idx,
-                        st.session_state.playback_speed,
-                        autoplay=True,
-                        audio_placeholder=audio_placeholder
-                    )
+                    # 진행 상황 표시
+                    if total_loops > 1:
+                        play_progress.info(f"🔊 **{loop_idx + 1}/{total_loops}회 루프 - {idx + 1}/{len(df)} 문장 재생 중**")
+                    else:
+                        play_progress.info(f"🔊 **{idx + 1}/{len(df)} 문장 재생 중**")
 
-                # 오디오 재생 시간 대기 (대략적인 시간: 문장 길이 기반)
-                wait_time = max(2, len(row['English'].split()) * 0.5 / st.session_state.playback_speed)
-                time.sleep(wait_time)
+                    # 각 문장마다 새로운 placeholder 사용
+                    with audio_container:
+                        audio_placeholder = st.empty()
+                        play_audio_with_stats(
+                            row['English'],
+                            idx,
+                            st.session_state.playback_speed,
+                            autoplay=True,
+                            audio_placeholder=audio_placeholder
+                        )
+
+                    # 오디오 재생 시간 대기
+                    wait_time = max(1.5, len(row['English'].split()) * 0.5 / st.session_state.playback_speed)
+                    time.sleep(wait_time)
+
+                # 루프 사이 짧은 간격 (마지막 루프가 아닌 경우)
+                if loop_idx < total_loops - 1:
+                    play_progress.info(f"⏳ **{loop_idx + 1}회 루프 완료! 다시 시작합니다...**")
+                    time.sleep(1)
 
             # 완료 메시지
-            play_progress.success("✓ 전체 재생이 완료되었습니다!")
+            play_progress.success(f"✓ 전체 재생이 완료되었습니다! (총 {total_loops}회 루프)")
+
+            # 원래 문장으로 복원
+            current_sentence_display.markdown(f"### {current_sentence['English']}")
+            if st.session_state.show_translation:
+                current_translation_display.markdown(f"*{current_sentence['Korean']}*")
+            else:
+                current_translation_display.empty()
 
     st.divider()
 
