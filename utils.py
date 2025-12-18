@@ -12,6 +12,8 @@ import json
 import plotly.graph_objects as go
 import plotly.express as px
 from pydub import AudioSegment
+import pyrubberband as pyrb
+import numpy as np
 
 
 # ============================================================
@@ -246,13 +248,28 @@ def generate_audio(text: str, speed: float = 1.0) -> bytes:
         try:
             audio = AudioSegment.from_file(fp, format="mp3")
 
-            # 속도 변경 (pitch 유지)
-            # 재생 속도를 높이려면 frame_rate를 높이고, 다시 원래대로 설정
-            new_sample_rate = int(audio.frame_rate * speed)
-            audio_with_speed = audio._spawn(
-                audio.raw_data,
-                overrides={"frame_rate": new_sample_rate}
-            ).set_frame_rate(audio.frame_rate)
+            # 모노로 변환
+            audio = audio.set_channels(1)
+
+            # AudioSegment를 numpy array로 변환 (int16)
+            samples = np.array(audio.get_array_of_samples(), dtype=np.int16)
+
+            # int16을 float32로 변환하여 정규화 (-1.0 ~ 1.0)
+            samples_float = samples.astype(np.float32) / 32768.0
+
+            # pyrubberband를 사용하여 pitch 유지하면서 속도만 조절
+            stretched_samples = pyrb.time_stretch(samples_float, audio.frame_rate, speed)
+
+            # float32를 다시 int16으로 변환
+            stretched_samples = np.clip(stretched_samples * 32768.0, -32768, 32767).astype(np.int16)
+
+            # numpy array를 다시 AudioSegment로 변환 (모노)
+            audio_with_speed = AudioSegment(
+                data=stretched_samples.tobytes(),
+                sample_width=audio.sample_width,
+                frame_rate=audio.frame_rate,
+                channels=1
+            )
 
             output = BytesIO()
             audio_with_speed.export(output, format="mp3")
