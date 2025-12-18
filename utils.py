@@ -225,6 +225,23 @@ def calculate_progress() -> tuple:
 # ============================================================
 
 @st.cache_data
+def _generate_base_audio(text: str) -> bytes:
+    """
+    기본 음성을 생성합니다 (속도 조절 없음).
+
+    Args:
+        text: 변환할 텍스트
+
+    Returns:
+        bytes: 기본 오디오 데이터
+    """
+    tts = gTTS(text=text, lang='en', slow=False)
+    fp = BytesIO()
+    tts.write_to_fp(fp)
+    fp.seek(0)
+    return fp.getvalue()
+
+
 def generate_audio(text: str, speed: float = 1.0) -> bytes:
     """
     텍스트를 음성으로 변환합니다.
@@ -237,15 +254,13 @@ def generate_audio(text: str, speed: float = 1.0) -> bytes:
         bytes: 오디오 데이터
     """
 
-    # gTTS로 기본 오디오 생성
-    tts = gTTS(text=text, lang='en', slow=False)
-    fp = BytesIO()
-    tts.write_to_fp(fp)
-    fp.seek(0)
+    # 기본 오디오 생성 (캐싱됨)
+    base_audio_bytes = _generate_base_audio(text)
 
     # 속도 조절이 필요한 경우
     if speed != 1.0:
         try:
+            fp = BytesIO(base_audio_bytes)
             audio = AudioSegment.from_file(fp, format="mp3")
 
             # 모노로 변환
@@ -276,10 +291,9 @@ def generate_audio(text: str, speed: float = 1.0) -> bytes:
             return output.getvalue()
         except Exception as e:
             st.warning(f"속도 조절 실패, 기본 속도로 재생합니다: {str(e)}")
-            fp.seek(0)
-            return fp.getvalue()
+            return base_audio_bytes
 
-    return fp.getvalue()
+    return base_audio_bytes
 
 
 def play_audio_with_stats(text: str, index: int, speed: float = 1.0, autoplay: bool = True, audio_placeholder=None) -> None:
