@@ -263,12 +263,41 @@ def generate_audio(text: str, speed: float = 1.0) -> bytes:
     return fp.getvalue()
 
 
-def play_audio_with_stats(text: str, index: int, speed: float = 1.0) -> None:
+def play_audio_with_stats(text: str, index: int, speed: float = 1.0, autoplay: bool = True, audio_placeholder=None) -> None:
     """오디오를 재생하고 통계를 업데이트합니다."""
 
     try:
         audio_bytes = generate_audio(text, speed)
-        st.audio(audio_bytes, format='audio/mp3')
+
+        if autoplay:
+            # 자동 재생되는 숨겨진 오디오 플레이어
+            import base64
+            import time as time_module
+            audio_base64 = base64.b64encode(audio_bytes).decode()
+
+            # 고유한 ID 생성 (timestamp 사용)
+            unique_id = f"audio_{int(time_module.time() * 1000)}"
+
+            audio_html = f"""
+                <audio id="{unique_id}" autoplay="true" style="display:none;">
+                    <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
+                </audio>
+                <script>
+                    // 오디오가 끝나면 요소 제거
+                    document.getElementById('{unique_id}').addEventListener('ended', function() {{
+                        this.remove();
+                    }});
+                </script>
+            """
+
+            # placeholder가 제공되면 그것을 사용, 아니면 새로 생성
+            if audio_placeholder is not None:
+                audio_placeholder.markdown(audio_html, unsafe_allow_html=True)
+            else:
+                st.markdown(audio_html, unsafe_allow_html=True)
+        else:
+            # 일반 오디오 플레이어 표시
+            st.audio(audio_bytes, format='audio/mp3')
 
         # 통계 업데이트
         st.session_state.total_listens += 1
@@ -338,7 +367,7 @@ def display_sentence_list(df: pd.DataFrame):
         stats = get_sentence_stats(idx)
 
         # 컬럼 생성
-        col1, col2, col3, col4 = st.columns([0.5, 5, 1, 1])
+        col1, col2, col3, col4, col5 = st.columns([0.5, 5, 1, 0.8, 0.8])
 
         with col1:
             # 인덱스 표시
@@ -363,6 +392,21 @@ def display_sentence_list(df: pd.DataFrame):
             st.caption(f"🎧 {stats['listen_count']}")
 
         with col4:
+            # 재생 버튼
+            if st.button("▶️", key=f"play_{idx}"):
+                # 각 재생마다 새로운 컨테이너 사용
+                audio_container = st.container()
+                with audio_container:
+                    audio_placeholder = st.empty()
+                    play_audio_with_stats(
+                        row['English'],
+                        idx,
+                        st.session_state.playback_speed,
+                        autoplay=True,
+                        audio_placeholder=audio_placeholder
+                    )
+
+        with col5:
             # 이동 버튼
             if st.button("이동", key=f"goto_{idx}"):
                 st.session_state.current_index = idx

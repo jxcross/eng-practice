@@ -335,17 +335,87 @@ def main():
 
     with col3:
         if st.button("▶️ 재생", use_container_width=True, type="primary"):
-            play_audio_with_stats(
-                current_sentence['English'],
-                current_idx,
-                st.session_state.playback_speed
-            )
+            # 개별 반복 모드인 경우
+            if st.session_state.repeat_mode == "개별 반복":
+                repeat_count = st.session_state.target_repeats
 
-            # 쉐도잉 모드인 경우 대기 시간 표시
-            if st.session_state.repeat_mode == "쉐도잉":
-                with st.spinner(f"따라 말하세요... ({st.session_state.shadowing_delay}초)"):
-                    time.sleep(st.session_state.shadowing_delay)
-                st.success("다음 문장으로 이동할 수 있습니다!")
+                # 진행 상황을 표시할 placeholder 생성
+                progress_placeholder = st.empty()
+                # 오디오 재생을 위한 컨테이너
+                audio_container = st.container()
+
+                for i in range(repeat_count):
+                    # 같은 위치에 진행 상황 업데이트
+                    progress_placeholder.info(f"🔊 **{i+1}/{repeat_count}회 재생 중...**")
+
+                    # 각 반복마다 새로운 placeholder 사용
+                    with audio_container:
+                        audio_placeholder = st.empty()
+                        play_audio_with_stats(
+                            current_sentence['English'],
+                            current_idx,
+                            st.session_state.playback_speed,
+                            autoplay=True,
+                            audio_placeholder=audio_placeholder
+                        )
+
+                    # 오디오가 재생될 시간 대기
+                    wait_time = max(1.5, len(current_sentence['English'].split()) * 0.5 / st.session_state.playback_speed)
+                    time.sleep(wait_time)
+
+                    # 마지막 반복이 아니면 짧은 간격 추가
+                    if i < repeat_count - 1:
+                        time.sleep(0.5)
+
+                # 완료 메시지로 업데이트
+                progress_placeholder.success(f"✓ {repeat_count}번 반복 완료!")
+
+            # 쉐도잉 모드인 경우
+            elif st.session_state.repeat_mode == "쉐도잉":
+                progress_placeholder = st.empty()
+                audio_container = st.container()
+
+                progress_placeholder.info("🔊 **재생 중...**")
+                with audio_container:
+                    audio_placeholder = st.empty()
+                    play_audio_with_stats(
+                        current_sentence['English'],
+                        current_idx,
+                        st.session_state.playback_speed,
+                        autoplay=True,
+                        audio_placeholder=audio_placeholder
+                    )
+
+                # 오디오가 재생될 시간 대기
+                wait_time = max(1.5, len(current_sentence['English'].split()) * 0.5 / st.session_state.playback_speed)
+                time.sleep(wait_time)
+
+                progress_placeholder.info(f"🎤 **따라 말하세요... ({st.session_state.shadowing_delay}초)**")
+                time.sleep(st.session_state.shadowing_delay)
+
+                progress_placeholder.success("✓ 다음 문장으로 이동할 수 있습니다!")
+
+            # 전체 루프 모드인 경우 (1번만 재생)
+            else:
+                progress_placeholder = st.empty()
+                audio_container = st.container()
+
+                progress_placeholder.info("🔊 **재생 중...**")
+                with audio_container:
+                    audio_placeholder = st.empty()
+                    play_audio_with_stats(
+                        current_sentence['English'],
+                        current_idx,
+                        st.session_state.playback_speed,
+                        autoplay=True,
+                        audio_placeholder=audio_placeholder
+                    )
+
+                # 오디오가 재생될 시간 대기
+                wait_time = max(1.5, len(current_sentence['English'].split()) * 0.5 / st.session_state.playback_speed)
+                time.sleep(wait_time)
+
+                progress_placeholder.success("✓ 재생 완료!")
 
     with col4:
         if st.button("다음 ▶️", use_container_width=True):
@@ -363,12 +433,31 @@ def main():
 
     with col5:
         if st.button("전체 재생 ⏯️", use_container_width=True):
-            st.info("전체 문장을 순차적으로 재생합니다...")
+            # 진행 상황 표시용 placeholder
+            play_progress = st.empty()
+            audio_container = st.container()
+
             for idx, row in df.iterrows():
-                st.write(f"**{idx + 1}. {row['English']}**")
-                play_audio_with_stats(row['English'], idx, st.session_state.playback_speed)
-                time.sleep(1)
-            st.success("전체 재생이 완료되었습니다!")
+                # 같은 위치에 현재 재생 중인 문장 표시
+                play_progress.info(f"🔊 **{idx + 1}/{len(df)}. {row['English']}**")
+
+                # 각 문장마다 새로운 placeholder 사용
+                with audio_container:
+                    audio_placeholder = st.empty()
+                    play_audio_with_stats(
+                        row['English'],
+                        idx,
+                        st.session_state.playback_speed,
+                        autoplay=True,
+                        audio_placeholder=audio_placeholder
+                    )
+
+                # 오디오 재생 시간 대기 (대략적인 시간: 문장 길이 기반)
+                wait_time = max(2, len(row['English'].split()) * 0.5 / st.session_state.playback_speed)
+                time.sleep(wait_time)
+
+            # 완료 메시지
+            play_progress.success("✓ 전체 재생이 완료되었습니다!")
 
     st.divider()
 
