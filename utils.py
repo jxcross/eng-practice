@@ -34,6 +34,8 @@ def initialize_session_state():
         st.session_state.playback_speed = 1.0
     if 'auto_play' not in st.session_state:
         st.session_state.auto_play = False
+    if 'auto_play_interval' not in st.session_state:
+        st.session_state.auto_play_interval = 1
 
     # 반복 설정
     if 'target_repeats' not in st.session_state:

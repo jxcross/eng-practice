@@ -130,9 +130,20 @@ def main():
         auto_play = st.checkbox(
             "자동 재생",
             value=st.session_state.auto_play,
-            help="일정 간격으로 자동으로 다음 문장을 재생합니다"
+            help="재생 버튼을 누르면 모든 문장을 자동으로 순차 재생합니다"
         )
         st.session_state.auto_play = auto_play
+
+        # 자동 재생이 활성화된 경우 간격 설정
+        if auto_play:
+            auto_play_interval = st.slider(
+                "문장 간 간격 (초)",
+                min_value=0,
+                max_value=5,
+                value=st.session_state.get('auto_play_interval', 1),
+                help="다음 문장 재생 전 대기 시간"
+            )
+            st.session_state.auto_play_interval = auto_play_interval
 
         # 모드별 추가 설정
         if repeat_mode == "개별 반복":
@@ -339,8 +350,73 @@ def main():
 
     with col3:
         if st.button("▶️ 재생", use_container_width=True, type="primary"):
+            # 자동 재생이 활성화된 경우
+            if st.session_state.auto_play:
+                progress_placeholder = st.empty()
+                audio_container = st.container()
+
+                # 현재 문장부터 끝까지 자동 재생
+                start_idx = st.session_state.current_index
+                for idx in range(start_idx, len(df)):
+                    row = df.iloc[idx]
+
+                    # 화면 최상단 업데이트
+                    current_sentence_display.markdown(f"### {row['English']}")
+                    if st.session_state.show_translation and row['Korean']:
+                        current_translation_display.markdown(f"*{row['Korean']}*")
+                    else:
+                        current_translation_display.empty()
+
+                    # 현재 인덱스 업데이트
+                    st.session_state.current_index = idx
+
+                    # 진행 상황 표시
+                    progress_placeholder.info(f"🔊 **자동 재생 중: {idx + 1}/{len(df)} 문장**")
+
+                    # 개별 반복 모드인 경우 반복 횟수만큼 재생
+                    repeat_count = st.session_state.target_repeats if st.session_state.repeat_mode == "개별 반복" else 1
+
+                    for repeat_idx in range(repeat_count):
+                        with audio_container:
+                            audio_placeholder = st.empty()
+                            play_audio_with_stats(
+                                row['English'],
+                                idx,
+                                st.session_state.playback_speed,
+                                autoplay=True,
+                                audio_placeholder=audio_placeholder
+                            )
+
+                        # 오디오 재생 시간 대기
+                        wait_time = max(1.5, len(row['English'].split()) * 0.5 / st.session_state.playback_speed)
+                        time.sleep(wait_time)
+
+                        # 반복 사이 간격
+                        if repeat_idx < repeat_count - 1:
+                            time.sleep(0.5)
+
+                    # 문장 간 간격
+                    if idx < len(df) - 1:
+                        time.sleep(st.session_state.auto_play_interval)
+
+                # 마지막 문장이면 다음 문장으로 이동 (처음으로)
+                if st.session_state.current_index >= len(df) - 1:
+                    st.session_state.current_index = 0
+                else:
+                    st.session_state.current_index += 1
+
+                progress_placeholder.success("✓ 자동 재생이 완료되었습니다!")
+
+                # 화면 최상단을 새로운 current_index로 복원
+                new_sentence = df.iloc[st.session_state.current_index]
+                current_sentence_display.markdown(f"### {new_sentence['English']}")
+                if st.session_state.show_translation and new_sentence['Korean']:
+                    current_translation_display.markdown(f"*{new_sentence['Korean']}*")
+                else:
+                    current_translation_display.empty()
+
             # 개별 반복 모드인 경우
-            if st.session_state.repeat_mode == "개별 반복":
+            elif st.session_state.repeat_mode == "개별 반복":
                 repeat_count = st.session_state.target_repeats
 
                 # 진행 상황을 표시할 placeholder 생성
