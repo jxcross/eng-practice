@@ -13,6 +13,7 @@ from utils import (
     parse_text_input,
     get_sentence_stats,
     generate_audio,
+    pregenerate_audio,
     play_audio_with_stats,
     save_session_to_json,
     load_session_from_json,
@@ -62,6 +63,10 @@ def main():
                 df = load_and_validate_csv(uploaded_file)
                 if df is not None:
                     st.session_state.df = df
+
+                    # 모든 오디오를 미리 생성
+                    pregenerate_audio(df)
+
                     st.success(f"✓ {len(df)}개 문장 로드 완료")
 
         else:  # 텍스트 붙여넣기
@@ -95,6 +100,10 @@ def main():
                     df = parse_text_input(english_text, include_korean, korean_text)
                     if df is not None:
                         st.session_state.df = df
+
+                        # 모든 오디오를 미리 생성
+                        pregenerate_audio(df)
+
                         st.success(f"✓ {len(df)}개 문장 로드 완료")
                 else:
                     st.warning("영어 문장을 입력해주세요.")
@@ -361,7 +370,7 @@ def main():
 
                             with audio_container:
                                 audio_placeholder = st.empty()
-                                play_audio_with_stats(
+                                audio_duration = play_audio_with_stats(
                                     row['English'],
                                     idx,
                                     st.session_state.playback_speed,
@@ -369,11 +378,8 @@ def main():
                                     audio_placeholder=audio_placeholder
                                 )
 
-                            wait_time = max(1.5, len(row['English'].split()) * 0.5 / st.session_state.playback_speed)
-                            time.sleep(wait_time)
-
-                            if i < repeat_count - 1:
-                                time.sleep(0.5)
+                            # 실제 오디오 재생 시간만큼 대기
+                            time.sleep(audio_duration)
 
                         # 문장 간 간격
                         if idx < len(df) - 1:
@@ -393,7 +399,7 @@ def main():
 
                         with audio_container:
                             audio_placeholder = st.empty()
-                            play_audio_with_stats(
+                            audio_duration = play_audio_with_stats(
                                 current_sentence['English'],
                                 current_idx,
                                 st.session_state.playback_speed,
@@ -401,11 +407,8 @@ def main():
                                 audio_placeholder=audio_placeholder
                             )
 
-                        wait_time = max(1.5, len(current_sentence['English'].split()) * 0.5 / st.session_state.playback_speed)
-                        time.sleep(wait_time)
-
-                        if i < repeat_count - 1:
-                            time.sleep(0.5)
+                        # 실제 오디오 재생 시간만큼 대기
+                        time.sleep(audio_duration)
 
                     progress_placeholder.success(f"✓ {repeat_count}번 반복 완료!")
 
@@ -430,7 +433,7 @@ def main():
                         progress_placeholder.info(f"🔊 **{idx + 1}/{len(df)} 문장 재생 중...**")
                         with audio_container:
                             audio_placeholder = st.empty()
-                            play_audio_with_stats(
+                            audio_duration = play_audio_with_stats(
                                 row['English'],
                                 idx,
                                 st.session_state.playback_speed,
@@ -438,8 +441,8 @@ def main():
                                 audio_placeholder=audio_placeholder
                             )
 
-                        wait_time = max(1.5, len(row['English'].split()) * 0.5 / st.session_state.playback_speed)
-                        time.sleep(wait_time)
+                        # 실제 오디오 재생 시간만큼 대기
+                        time.sleep(audio_duration)
 
                         # 쉐도잉 시간
                         progress_placeholder.info(f"🎤 **따라 말하세요... ({st.session_state.shadowing_delay}초)**")
@@ -461,7 +464,7 @@ def main():
                     progress_placeholder.info("🔊 **재생 중...**")
                     with audio_container:
                         audio_placeholder = st.empty()
-                        play_audio_with_stats(
+                        audio_duration = play_audio_with_stats(
                             current_sentence['English'],
                             current_idx,
                             st.session_state.playback_speed,
@@ -469,8 +472,8 @@ def main():
                             audio_placeholder=audio_placeholder
                         )
 
-                    wait_time = max(1.5, len(current_sentence['English'].split()) * 0.5 / st.session_state.playback_speed)
-                    time.sleep(wait_time)
+                    # 실제 오디오 재생 시간만큼 대기
+                    time.sleep(audio_duration)
 
                     progress_placeholder.info(f"🎤 **따라 말하세요... ({st.session_state.shadowing_delay}초)**")
                     time.sleep(st.session_state.shadowing_delay)
@@ -498,7 +501,7 @@ def main():
                         progress_placeholder.info(f"🔊 **{idx + 1}/{len(df)} 문장 재생 중...**")
                         with audio_container:
                             audio_placeholder = st.empty()
-                            play_audio_with_stats(
+                            audio_duration = play_audio_with_stats(
                                 row['English'],
                                 idx,
                                 st.session_state.playback_speed,
@@ -506,8 +509,8 @@ def main():
                                 audio_placeholder=audio_placeholder
                             )
 
-                        wait_time = max(1.5, len(row['English'].split()) * 0.5 / st.session_state.playback_speed)
-                        time.sleep(wait_time)
+                        # 실제 오디오 재생 시간만큼 대기
+                        time.sleep(audio_duration)
 
                         # 문장 간 간격
                         if idx < len(df) - 1:
@@ -525,7 +528,7 @@ def main():
                     progress_placeholder.info("🔊 **재생 중...**")
                     with audio_container:
                         audio_placeholder = st.empty()
-                        play_audio_with_stats(
+                        audio_duration = play_audio_with_stats(
                             current_sentence['English'],
                             current_idx,
                             st.session_state.playback_speed,
@@ -533,8 +536,8 @@ def main():
                             audio_placeholder=audio_placeholder
                         )
 
-                    wait_time = max(1.5, len(current_sentence['English'].split()) * 0.5 / st.session_state.playback_speed)
-                    time.sleep(wait_time)
+                    # 실제 오디오 재생 시간만큼 대기
+                    time.sleep(audio_duration)
 
                     progress_placeholder.success("✓ 재생 완료!")
 

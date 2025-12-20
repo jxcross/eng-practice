@@ -12,8 +12,6 @@ import json
 import plotly.graph_objects as go
 import plotly.express as px
 from pydub import AudioSegment
-import pyrubberband as pyrb
-import numpy as np
 
 
 # ============================================================
@@ -68,6 +66,12 @@ def initialize_session_state():
         st.session_state.show_translation = True
     if 'show_stats' not in st.session_state:
         st.session_state.show_stats = True
+
+    # Audio cache
+    if 'audio_cache' not in st.session_state:
+        st.session_state.audio_cache = {}  # {index: audio_bytes}
+    if 'audio_durations' not in st.session_state:
+        st.session_state.audio_durations = {}  # {index: duration_seconds}
 
 
 def save_session_to_json() -> str:
@@ -242,65 +246,86 @@ def _generate_base_audio(text: str) -> bytes:
     return fp.getvalue()
 
 
-def generate_audio(text: str, speed: float = 1.0) -> bytes:
+def pregenerate_audio(df):
     """
-    텍스트를 음성으로 변환합니다.
+    DataFrame의 모든 문장에 대해 기본 오디오를 미리 생성하여 캐시에 저장합니다.
+
+    Args:
+        df: English 컬럼이 있는 pandas DataFrame
+    """
+    import streamlit as st
+    import time
+
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
+    for idx, row in df.iterrows():
+        if idx not in st.session_state.audio_cache:
+            status_text.text(f"오디오 생성 중... {idx + 1}/{len(df)}")
+
+            # 기본 오디오 생성 (속도 조절 없이)
+            base_audio_bytes = _generate_base_audio(row['English'])
+
+            # 오디오 길이 계산
+            fp = BytesIO(base_audio_bytes)
+            audio = AudioSegment.from_file(fp, format="mp3")
+            duration = len(audio) / 1000.0
+
+            # 캐시에 저장
+            st.session_state.audio_cache[idx] = base_audio_bytes
+            st.session_state.audio_durations[idx] = duration
+
+        progress_bar.progress((idx + 1) / len(df))
+
+    status_text.text("✓ 모든 오디오 생성 완료!")
+    time.sleep(0.5)
+    progress_bar.empty()
+    status_text.empty()
+
+
+def generate_audio(text: str, speed: float = 1.0) -> tuple:
+    """
+    텍스트를 음성으로 변환합니다 (기본 속도만).
+    속도 조절은 브라우저의 playbackRate로 처리됩니다.
 
     Args:
         text: 변환할 텍스트
-        speed: 재생 속도 (0.5 ~ 2.0)
+        speed: 재생 속도 (duration 계산에만 사용)
 
     Returns:
-        bytes: 오디오 데이터
+        tuple: (오디오 데이터 bytes, 재생 시간 float)
     """
-
     # 기본 오디오 생성 (캐싱됨)
     base_audio_bytes = _generate_base_audio(text)
 
-    # 속도 조절이 필요한 경우
-    if speed != 1.0:
-        try:
-            fp = BytesIO(base_audio_bytes)
-            audio = AudioSegment.from_file(fp, format="mp3")
+    # 오디오 길이 계산
+    fp = BytesIO(base_audio_bytes)
+    audio = AudioSegment.from_file(fp, format="mp3")
+    base_duration = len(audio) / 1000.0
 
-            # 모노로 변환
-            audio = audio.set_channels(1)
+    # 속도를 고려한 실제 재생 시간 계산
+    duration = base_duration / speed
 
-            # AudioSegment를 numpy array로 변환 (int16)
-            samples = np.array(audio.get_array_of_samples(), dtype=np.int16)
-
-            # int16을 float32로 변환하여 정규화 (-1.0 ~ 1.0)
-            samples_float = samples.astype(np.float32) / 32768.0
-
-            # pyrubberband를 사용하여 pitch 유지하면서 속도만 조절
-            stretched_samples = pyrb.time_stretch(samples_float, audio.frame_rate, speed)
-
-            # float32를 다시 int16으로 변환
-            stretched_samples = np.clip(stretched_samples * 32768.0, -32768, 32767).astype(np.int16)
-
-            # numpy array를 다시 AudioSegment로 변환 (모노)
-            audio_with_speed = AudioSegment(
-                data=stretched_samples.tobytes(),
-                sample_width=audio.sample_width,
-                frame_rate=audio.frame_rate,
-                channels=1
-            )
-
-            output = BytesIO()
-            audio_with_speed.export(output, format="mp3")
-            return output.getvalue()
-        except Exception as e:
-            st.warning(f"속도 조절 실패, 기본 속도로 재생합니다: {str(e)}")
-            return base_audio_bytes
-
-    return base_audio_bytes
+    return base_audio_bytes, duration
 
 
-def play_audio_with_stats(text: str, index: int, speed: float = 1.0, autoplay: bool = True, audio_placeholder=None) -> None:
-    """오디오를 재생하고 통계를 업데이트합니다."""
+def play_audio_with_stats(text: str, index: int, speed: float = 1.0, autoplay: bool = True, audio_placeholder=None) -> float:
+    """오디오를 재생하고 통계를 업데이트합니다.
+
+    Returns:
+        float: 오디오 재생 시간(초)
+    """
 
     try:
-        audio_bytes = generate_audio(text, speed)
+        # 캐시에서 오디오를 가져오거나 생성
+        if index in st.session_state.audio_cache:
+            audio_bytes = st.session_state.audio_cache[index]
+            base_duration = st.session_state.audio_durations[index]
+            # 속도에 따른 재생 시간 계산
+            duration = base_duration / speed
+        else:
+            # 캐시에 없으면 생성 (fallback)
+            audio_bytes, duration = generate_audio(text, speed)
 
         if autoplay:
             # 자동 재생되는 숨겨진 오디오 플레이어
@@ -317,10 +342,15 @@ def play_audio_with_stats(text: str, index: int, speed: float = 1.0, autoplay: b
                     <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
                 </audio>
                 <script>
-                    // 오디오가 끝나면 요소 제거
-                    document.getElementById('{unique_id}').addEventListener('ended', function() {{
-                        this.remove();
-                    }});
+                    (function() {{
+                        var audio = document.getElementById('{unique_id}');
+                        if (audio) {{
+                            audio.playbackRate = {speed};  // 브라우저 네이티브 속도 조절
+                            audio.addEventListener('ended', function() {{
+                                this.remove();
+                            }});
+                        }}
+                    }})();
                 </script>
             """
 
@@ -349,8 +379,11 @@ def play_audio_with_stats(text: str, index: int, speed: float = 1.0, autoplay: b
         st.session_state.practice_stats[index]['listen_count'] += 1
         st.session_state.practice_stats[index]['last_practiced'] = datetime.now()
 
+        return duration
+
     except Exception as e:
         st.error(f"오디오 생성 실패: {str(e)}")
+        return 0.0
 
 
 # ============================================================
