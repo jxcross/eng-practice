@@ -439,3 +439,50 @@ def play_audio_with_stats_v2(text: str, index: int, speed: float = 1.0, audio_pl
         return 0.0
 
 
+def play_audio_with_mediaelement(df, current_index: int, speed: float = 1.0) -> str:
+    """
+    Generate HTML playlist with MediaElement.js styling.
+
+    Args:
+        df: DataFrame with all sentences
+        current_index: Current sentence index
+        speed: Playback speed (0.5-2.0)
+
+    Returns:
+        str: HTML for playlist
+    """
+    try:
+        # Build playlist HTML
+        playlist_html = '<div class="mejs__playlist" style="margin-top: 10px;">'
+        playlist_html += f'<div style="background: linear-gradient(180deg, #4a6a8a 0%, #2a4a6a 100%); padding: 8px 12px; border-bottom: 1px solid #00ff00; color: #00ff00; font-weight: bold; font-family: \'Courier New\', monospace;">PLAYLIST - {len(df)} SENTENCES</div>'
+
+        for idx, row in df.iterrows():
+            # Determine if this is the current item
+            item_class = 'mejs__playlist-item'
+            if idx == current_index:
+                item_class += ' mejs__playlist-current'
+
+            # Get duration
+            if idx in st.session_state.audio_durations:
+                duration_sec = int(st.session_state.audio_durations[idx])
+                timestamp = f"{duration_sec // 60:02d}:{duration_sec % 60:02d}"
+            else:
+                timestamp = "00:00"
+
+            # Create playlist item
+            playlist_html += f'''
+            <div class="{item_class}" style="position: relative;">
+                <div class="mejs__playlist-title">{idx + 1}. {row["English"]}</div>
+                <div class="mejs__playlist-description">{row.get("Korean", "")}</div>
+                <div style="position: absolute; right: 12px; top: 10px; color: #00ff00; font-size: 11px; font-family: \'Courier New\', monospace;">{timestamp}</div>
+            </div>
+            '''
+
+        playlist_html += '</div>'
+
+        return playlist_html
+
+    except Exception as e:
+        return f'<div style="color: red;">❌ 플레이리스트 생성 실패: {str(e)}</div>'
+
+
