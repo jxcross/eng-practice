@@ -1,8 +1,6 @@
 """
-English Sentence Practice App
+English Sentence Practice App - Winamp Style
 영어 문장 반복 연습 프로그램
-
-세련된 Streamlit 기반 영어 반복 학습 애플리케이션
 """
 
 import streamlit as st
@@ -11,14 +9,8 @@ from utils import (
     initialize_session_state,
     load_and_validate_csv,
     parse_text_input,
-    get_sentence_stats,
-    generate_audio,
     pregenerate_audio,
-    play_audio_with_stats,
-    save_session_to_json,
-    load_session_from_json,
-    apply_custom_css,
-    display_transcript_list
+    play_audio_with_stats_v2,
 )
 
 
@@ -27,7 +19,7 @@ def main():
 
     # 페이지 설정
     st.set_page_config(
-        page_title="영어 문장 반복 연습",
+        page_title="영어 문장 반복 연습 - Winamp Style",
         page_icon="🎧",
         layout="wide",
         initial_sidebar_state="expanded"
@@ -36,95 +28,325 @@ def main():
     # 세션 초기화
     initialize_session_state()
 
-    # 커스텀 CSS 적용
-    apply_custom_css(st.session_state.dark_mode)
+    # Winamp 스타일 CSS
+    st.markdown("""
+    <style>
+    /* 전체 배경 */
+    .stApp {
+        background: #000000 !important;
+    }
+
+    /* 사이드바 스타일 */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
+    }
+
+    /* Winamp 메인 플레이어 */
+    .winamp-player {
+        background: linear-gradient(180deg, #2a4a6a 0%, #1a2a3a 100%);
+        border: 2px outset #4a6a8a;
+        border-radius: 0;
+        padding: 0;
+        margin: 20px auto;
+        max-width: 500px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.8);
+        font-family: 'Tahoma', 'Arial', sans-serif;
+    }
+
+    /* 플레이어 헤더 */
+    .winamp-header {
+        background: linear-gradient(180deg, #4a6a8a 0%, #2a4a6a 100%);
+        padding: 4px 8px;
+        border-bottom: 1px solid #1a2a3a;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .winamp-title {
+        color: #ffffff;
+        font-size: 11px;
+        font-weight: bold;
+        text-shadow: 1px 1px 0px rgba(0,0,0,0.5);
+    }
+
+    /* 디스플레이 영역 */
+    .winamp-display {
+        background: #000000;
+        border: 2px inset #1a2a3a;
+        margin: 8px;
+        padding: 8px;
+        min-height: 60px;
+    }
+
+    .winamp-time {
+        color: #00ff00;
+        font-family: 'Courier New', monospace;
+        font-size: 32px;
+        font-weight: bold;
+        text-shadow: 0 0 8px rgba(0, 255, 0, 0.8);
+        letter-spacing: 4px;
+    }
+
+    .winamp-text {
+        color: #00ff00;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        text-shadow: 0 0 4px rgba(0, 255, 0, 0.6);
+        margin-top: 8px;
+    }
+
+    /* 비주얼라이저 */
+    .visualizer {
+        background: #000000;
+        border: 2px inset #1a2a3a;
+        margin: 0 8px 8px 8px;
+        padding: 8px;
+        height: 60px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 2px;
+    }
+
+    .viz-bar {
+        width: 4px;
+        background: linear-gradient(180deg, #00ff00 0%, #00aa00 100%);
+        border: 1px solid #00ff00;
+        box-shadow: 0 0 4px rgba(0, 255, 0, 0.6);
+        animation: vizPulse 0.8s ease-in-out infinite;
+    }
+
+    @keyframes vizPulse {
+        0%, 100% { transform: scaleY(0.3); opacity: 0.6; }
+        50% { transform: scaleY(1); opacity: 1; }
+    }
+
+    /* Winamp 플레이리스트 */
+    .winamp-playlist {
+        background: linear-gradient(180deg, #2a4a6a 0%, #1a2a3a 100%);
+        border: 2px outset #4a6a8a;
+        border-radius: 0;
+        padding: 0;
+        margin: 20px auto;
+        max-width: 800px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.8);
+    }
+
+    .playlist-header {
+        background: linear-gradient(180deg, #4a6a8a 0%, #2a4a6a 100%);
+        padding: 4px 8px;
+        border-bottom: 1px solid #1a2a3a;
+        color: #ffffff;
+        font-size: 11px;
+        font-weight: bold;
+        text-shadow: 1px 1px 0px rgba(0,0,0,0.5);
+    }
+
+    .playlist-content {
+        background: #000000;
+        border: 2px inset #1a2a3a;
+        margin: 8px;
+        padding: 8px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .playlist-item {
+        color: #00ff00;
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        padding: 4px 8px;
+        cursor: pointer;
+        border-left: 3px solid transparent;
+    }
+
+    .playlist-item:hover {
+        background: rgba(0, 255, 0, 0.1);
+        border-left: 3px solid #00ff00;
+    }
+
+    .playlist-item-current {
+        background: rgba(0, 255, 0, 0.2);
+        border-left: 3px solid #00ff00;
+        font-weight: bold;
+    }
+
+    .playlist-time {
+        color: #00aaaa;
+        float: right;
+    }
+
+    /* 버튼 스타일 */
+    .stButton > button {
+        background: linear-gradient(180deg, #4a6a8a 0%, #2a4a6a 100%) !important;
+        border: 2px outset #5a7a9a !important;
+        border-radius: 3px !important;
+        color: #ffffff !important;
+        font-family: 'Tahoma', 'Arial', sans-serif !important;
+        font-size: 12px !important;
+        font-weight: bold !important;
+        text-shadow: 1px 1px 0px rgba(0,0,0,0.5) !important;
+        padding: 6px 12px !important;
+        transition: all 0.1s !important;
+    }
+
+    .stButton > button:hover {
+        background: linear-gradient(180deg, #5a7a9a 0%, #3a5a7a 100%) !important;
+        border: 2px outset #6a8aaa !important;
+    }
+
+    .stButton > button:active {
+        border: 2px inset #3a5a7a !important;
+    }
+
+    /* 슬라이더 스타일 */
+    .stSlider > div > div > div {
+        background: #1a2a3a !important;
+    }
+
+    .stSlider > div > div > div > div {
+        background: #00ff00 !important;
+    }
+
+    /* 라디오 버튼 */
+    .stRadio > label {
+        color: #00ff00 !important;
+        font-family: 'Courier New', monospace !important;
+    }
+
+    /* 스크롤바 */
+    .playlist-content::-webkit-scrollbar {
+        width: 12px;
+    }
+
+    .playlist-content::-webkit-scrollbar-track {
+        background: #0a0a0a;
+        border: 1px solid #1a2a3a;
+    }
+
+    .playlist-content::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #4a6a8a 0%, #2a4a6a 100%);
+        border: 1px solid #5a7a9a;
+    }
+
+    .playlist-content::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, #5a7a9a 0%, #3a5a7a 100%);
+    }
+
+    /* MediaElement.js 플레이어 커스터마이징 */
+    .mejs__container {
+        background: #000000 !important;
+        border: 2px inset #1a2a3a !important;
+        margin: 8px !important;
+    }
+
+    .mejs__controls {
+        background: linear-gradient(180deg, #2a4a6a 0%, #1a2a3a 100%) !important;
+        padding: 8px !important;
+    }
+
+    .mejs__button > button {
+        color: #00ff00 !important;
+    }
+
+    .mejs__time {
+        color: #00ff00 !important;
+        font-family: 'Courier New', monospace !important;
+        font-weight: bold !important;
+        text-shadow: 0 0 4px rgba(0, 255, 0, 0.6) !important;
+    }
+
+    .mejs__time-rail {
+        background: #0a0a0a !important;
+        border: 1px solid #1a2a3a !important;
+    }
+
+    .mejs__time-loaded {
+        background: #1a3a2a !important;
+    }
+
+    .mejs__time-current {
+        background: #00ff00 !important;
+        box-shadow: 0 0 4px rgba(0, 255, 0, 0.6) !important;
+    }
+
+    .mejs__horizontal-volume-slider {
+        background: #0a0a0a !important;
+        border: 1px solid #1a2a3a !important;
+    }
+
+    .mejs__horizontal-volume-current {
+        background: #00ff00 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
     # ========== 사이드바 ==========
     with st.sidebar:
-        st.title("⚙️ 설정")
+        st.markdown('<p style="color: #00ff00; font-family: Courier New, monospace; font-size: 18px; font-weight: bold;">⚙️ SETTINGS</p>', unsafe_allow_html=True)
 
-        # 입력 방식 선택
-        st.subheader("데이터 입력")
+        # 데이터 입력
+        st.markdown('<p style="color: #00ff00; font-family: Courier New, monospace; font-size: 14px;">📁 DATA INPUT</p>', unsafe_allow_html=True)
+
         input_method = st.radio(
-            "입력 방식 선택",
-            ["CSV 파일 업로드", "텍스트 붙여넣기"],
-            help="CSV 파일을 업로드하거나 영어 문장을 직접 붙여넣으세요"
+            "Input Method",
+            ["CSV Upload", "Text Paste"],
+            label_visibility="collapsed"
         )
 
-        if input_method == "CSV 파일 업로드":
-            # CSV 파일 업로드
+        if input_method == "CSV Upload":
             uploaded_file = st.file_uploader(
-                "CSV 파일 업로드",
+                "Upload CSV",
                 type=['csv'],
-                help="English와 Korean 열이 포함된 CSV 파일을 업로드하세요"
+                help="CSV with English and Korean columns"
             )
 
             if uploaded_file is not None:
-                df = load_and_validate_csv(uploaded_file)
-                if df is not None:
-                    st.session_state.df = df
-
-                    # 모든 오디오를 미리 생성
-                    pregenerate_audio(df)
-
-                    st.success(f"✓ {len(df)}개 문장 로드 완료")
-
-        else:  # 텍스트 붙여넣기
-            # 영어 문장 입력
-            english_text = st.text_area(
-                "영어 문장 입력",
-                height=200,
-                placeholder="영어 문장을 한 줄에 하나씩 입력하세요.\n예:\nI love programming.\nPython is awesome.\nLet's practice English!",
-                help="각 줄에 하나의 영어 문장을 입력하세요"
-            )
-
-            # 한국어 번역 포함 여부
-            include_korean = st.checkbox(
-                "한국어 번역 포함",
-                value=False,
-                help="한국어 번역도 함께 입력하려면 체크하세요"
-            )
-
-            korean_text = ""
-            if include_korean:
-                korean_text = st.text_area(
-                    "한국어 번역 입력",
-                    height=200,
-                    placeholder="한국어 번역을 한 줄에 하나씩 입력하세요.\n예:\n나는 프로그래밍을 좋아합니다.\n파이썬은 멋집니다.\n영어를 연습해봅시다!",
-                    help="영어 문장과 같은 순서로 한국어 번역을 입력하세요"
-                )
-
-            # 로드 버튼
-            if st.button("문장 로드", use_container_width=True, type="primary"):
-                if english_text.strip():
-                    df = parse_text_input(english_text, include_korean, korean_text)
+                # 파일 이름이 변경되었을 때만 새로 로드
+                file_id = f"{uploaded_file.name}_{uploaded_file.size}"
+                if 'loaded_file_id' not in st.session_state or st.session_state.loaded_file_id != file_id:
+                    df = load_and_validate_csv(uploaded_file)
                     if df is not None:
                         st.session_state.df = df
-
-                        # 모든 오디오를 미리 생성
+                        st.session_state.loaded_file_id = file_id
                         pregenerate_audio(df)
+                        st.success(f"✓ {len(df)} sentences loaded")
 
-                        st.success(f"✓ {len(df)}개 문장 로드 완료")
+        else:
+            english_text = st.text_area(
+                "English Sentences",
+                height=150,
+                placeholder="One sentence per line...",
+                label_visibility="collapsed"
+            )
+
+            if st.button("LOAD", use_container_width=True):
+                if english_text.strip():
+                    df = parse_text_input(english_text, False, "")
+                    if df is not None:
+                        st.session_state.df = df
+                        st.session_state.loaded_file_id = f"text_{hash(english_text)}"
+                        pregenerate_audio(df)
+                        st.success(f"✓ {len(df)} loaded")
                 else:
-                    st.warning("영어 문장을 입력해주세요.")
+                    st.warning("Enter sentences")
 
         st.divider()
 
-        # 재생 모드 선택
-        st.subheader("재생 모드")
+        # 재생 모드
+        st.markdown('<p style="color: #00ff00; font-family: Courier New, monospace; font-size: 14px;">🔁 PLAY MODE</p>', unsafe_allow_html=True)
+
         repeat_mode = st.radio(
-            "모드 선택",
-            ["개별 반복", "전체 루프", "쉐도잉"],
-            key="repeat_mode_selector",
-            help="학습 방식을 선택하세요"
+            "Mode",
+            ["Individual", "Loop All", "Shadowing"],
+            label_visibility="collapsed"
         )
         st.session_state.repeat_mode = repeat_mode
 
-        # 재생 설정
-        st.subheader("재생 설정")
-
+        # 재생 속도
         playback_speed = st.slider(
-            "재생 속도",
+            "Speed",
             min_value=0.5,
             max_value=2.0,
             value=st.session_state.playback_speed,
@@ -133,513 +355,92 @@ def main():
         )
         st.session_state.playback_speed = playback_speed
 
-        auto_play = st.checkbox(
-            "자동 재생",
-            value=st.session_state.auto_play,
-            help="재생 버튼을 누르면 모든 문장을 자동으로 순차 재생합니다"
-        )
-        st.session_state.auto_play = auto_play
-
-        # 자동 재생이 활성화된 경우 간격 설정
-        if auto_play:
-            auto_play_interval = st.slider(
-                "문장 간 간격 (초)",
-                min_value=0,
-                max_value=5,
-                value=st.session_state.get('auto_play_interval', 1),
-                help="다음 문장 재생 전 대기 시간"
-            )
-            st.session_state.auto_play_interval = auto_play_interval
-
-        # 모드별 추가 설정
-        if repeat_mode == "개별 반복":
+        # 모드별 설정
+        if repeat_mode == "Individual":
             target_repeats = st.number_input(
-                "목표 반복 횟수",
+                "Repeats per sentence",
                 min_value=1,
                 max_value=20,
-                value=st.session_state.target_repeats,
-                help="각 문장을 몇 번 반복할지 설정하세요"
+                value=st.session_state.target_repeats
             )
             st.session_state.target_repeats = target_repeats
 
-        elif repeat_mode == "전체 루프":
+        elif repeat_mode == "Loop All":
             loop_target = st.number_input(
-                "목표 루프 횟수",
+                "Loop count",
                 min_value=1,
                 max_value=100,
-                value=st.session_state.loop_target,
-                help="전체 문장을 몇 번 반복할지 설정하세요"
+                value=st.session_state.loop_target
             )
             st.session_state.loop_target = loop_target
+            st.caption(f"Current: {st.session_state.loop_count} / {st.session_state.loop_target}")
 
-            # 현재 루프 진행 상황
-            st.caption(f"현재 루프: {st.session_state.loop_count} / {st.session_state.loop_target}")
-
-        elif repeat_mode == "쉐도잉":
+        elif repeat_mode == "Shadowing":
             shadowing_delay = st.slider(
-                "쉐도잉 대기 시간 (초)",
+                "Delay (seconds)",
                 min_value=1,
                 max_value=10,
-                value=st.session_state.shadowing_delay,
-                help="음성 재생 후 따라 말할 시간을 설정하세요"
+                value=st.session_state.shadowing_delay
             )
             st.session_state.shadowing_delay = shadowing_delay
 
         st.divider()
 
-        # UI 옵션
-        st.subheader("표시 옵션")
-
-        show_translation = st.checkbox(
-            "한국어 번역 표시",
-            value=st.session_state.show_translation
-        )
-        st.session_state.show_translation = show_translation
-
-        show_stats = st.checkbox(
-            "통계 표시",
-            value=st.session_state.show_stats
-        )
-        st.session_state.show_stats = show_stats
-
-        dark_mode = st.checkbox(
-            "다크 모드",
-            value=st.session_state.dark_mode
-        )
-        if dark_mode != st.session_state.dark_mode:
-            st.session_state.dark_mode = dark_mode
-            st.rerun()
-
-        st.divider()
-
-        # 세션 관리
-        st.subheader("세션 관리")
-
-        if st.button("💾 진행 상황 저장", use_container_width=True):
-            json_data = save_session_to_json()
-            st.download_button(
-                label="다운로드",
-                data=json_data,
-                file_name=f"session_{st.session_state.session_start_time.strftime('%Y%m%d_%H%M%S')}.json",
-                mime="application/json",
-                use_container_width=True
-            )
-            st.success("세션이 저장되었습니다!")
-
-        uploaded_session = st.file_uploader(
-            "진행 상황 불러오기",
-            type=['json'],
-            key="session_upload"
-        )
-
-        if uploaded_session is not None:
-            json_str = uploaded_session.read().decode('utf-8')
-            if load_session_from_json(json_str):
-                st.success("세션이 복원되었습니다!")
-                st.rerun()
-
-        if st.button("🔄 세션 초기화", use_container_width=True):
-            # 세션 초기화
+        # 리셋 버튼
+        if st.button("🔄 RESET", use_container_width=True):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
 
     # ========== 메인 영역 ==========
-    # Winamp 스타일 CSS
-    st.markdown("""
-    <style>
-    /* Winamp 메인 컨테이너 */
-    .media-player-container {
-        background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
-        border: 2px solid #4a4a4a;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 20px 0;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 4px 8px rgba(0,0,0,0.5);
-        font-family: 'Courier New', monospace;
-    }
-    
-    /* Winamp 스타일 오디오 비주얼라이저 */
-    .audio-visualizer {
-        background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
-        border: 2px solid #4a4a4a;
-        border-radius: 4px;
-        padding: 20px;
-        margin: 15px 0;
-        min-height: 150px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        overflow: hidden;
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
-    }
-    
-    .waveform-bars {
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        gap: 3px;
-        height: 100px;
-    }
-    
-    .waveform-bar {
-        width: 5px;
-        background: linear-gradient(180deg, #00FF41 0%, #00FF00 50%, #00A8FF 100%);
-        border: 1px solid #00FF41;
-        border-radius: 2px;
-        animation: winampWave 0.8s ease-in-out infinite;
-        box-shadow: 0 0 4px rgba(0, 255, 65, 0.6);
-    }
-    
-    @keyframes winampWave {
-        0%, 100% { transform: scaleY(0.2); opacity: 0.6; }
-        50% { transform: scaleY(1); opacity: 1; }
-    }
-    
-    /* Winamp 스타일 문장 디스플레이 */
-    .sentence-display {
-        background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
-        border: 2px solid #4a4a4a;
-        border-radius: 4px;
-        padding: 25px;
-        margin: 20px 0;
-        text-align: center;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.5);
-    }
-    
-    .sentence-display h2 {
-        color: #00FF41 !important;
-        font-family: 'Courier New', monospace;
-        font-weight: bold;
-        text-shadow: 0 0 8px rgba(0, 255, 65, 0.8), 0 0 4px rgba(0, 255, 65, 0.6);
-        font-size: 28px;
-        margin-bottom: 15px;
-    }
-    
-    .sentence-display p {
-        color: #00A8FF !important;
-        font-family: 'Courier New', monospace;
-        font-size: 18px;
-        text-shadow: 0 0 4px rgba(0, 168, 255, 0.6);
-    }
-    
-    /* Winamp 스타일 진행 바 */
-    .progress-container {
-        background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
-        border: 2px solid #4a4a4a;
-        border-radius: 4px;
-        padding: 12px;
-        margin: 15px 0;
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
-    }
-    
-    .progress-container > div:first-child {
-        color: #00FF41 !important;
-        font-family: 'Courier New', monospace;
-        font-weight: bold;
-        text-shadow: 0 0 4px rgba(0, 255, 65, 0.8);
-    }
-    
-    .progress-container > div:last-child {
-        background: #1a1a1a !important;
-        border: 1px solid #4a4a4a;
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
-    }
-    
-    .progress-container > div:last-child > div {
-        background: linear-gradient(90deg, #00FF41 0%, #00A8FF 100%) !important;
-        box-shadow: 0 0 8px rgba(0, 255, 65, 0.6);
-    }
-    
-    /* Winamp 스타일 통계 카드 */
-    .stat-card {
-        background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
-        border: 2px solid #4a4a4a;
-        border-radius: 4px;
-        padding: 12px;
-        text-align: center;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.5);
-    }
-    
-    .stat-card > div:first-child {
-        color: #00FF41 !important;
-        font-family: 'Courier New', monospace;
-        font-weight: bold;
-        text-shadow: 0 0 6px rgba(0, 255, 65, 0.8);
-    }
-    
-    .stat-card > div:last-child {
-        color: #00A8FF !important;
-        font-family: 'Courier New', monospace;
-        text-shadow: 0 0 4px rgba(0, 168, 255, 0.6);
-    }
-    
-    /* Winamp 스타일 버튼 */
-    .stButton > button {
-        background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%) !important;
-        border: 2px solid #4a4a4a !important;
-        border-radius: 4px !important;
-        color: #00FF41 !important;
-        font-family: 'Courier New', monospace !important;
-        font-weight: bold !important;
-        text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.5) !important;
-        transition: all 0.2s !important;
-    }
-    
-    .stButton > button:hover {
-        background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%) !important;
-        border-color: #00FF41 !important;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 0 8px rgba(0, 255, 65, 0.4) !important;
-    }
-    
-    .stButton > button[kind="primary"] {
-        background: linear-gradient(180deg, #00A8FF 0%, #0088CC 100%) !important;
-        border-color: #00FF41 !important;
-        color: #000000 !important;
-        text-shadow: none !important;
-    }
-    
-    /* MediaElement.js Winamp 스타일 */
-    .mejs__container {
-        background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
-        border: 2px solid #4a4a4a !important;
-        border-radius: 4px !important;
-        padding: 8px !important;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.5) !important;
-    }
-    
-    .mejs__controls {
-        background: transparent !important;
-    }
-    
-    .mejs__button > button {
-        color: #00FF41 !important;
-        text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
-    }
-    
-    .mejs__time {
-        color: #00FF41 !important;
-        font-family: 'Courier New', monospace !important;
-        font-weight: bold !important;
-        text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
-    }
-    
-    .mejs__time-rail {
-        background: #1a1a1a !important;
-        border: 1px solid #4a4a4a !important;
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.8) !important;
-    }
-    
-    .mejs__time-loaded {
-        background: #2a2a2a !important;
-    }
-    
-    .mejs__time-current {
-        background: linear-gradient(90deg, #00FF41 0%, #00A8FF 100%) !important;
-        box-shadow: 0 0 6px rgba(0, 255, 65, 0.6) !important;
-    }
-    
-    .mejs__volume-button > button {
-        color: #00FF41 !important;
-        text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
-    }
-    
-    .mejs__horizontal-volume-slider {
-        background: #1a1a1a !important;
-        border: 1px solid #4a4a4a !important;
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.8) !important;
-    }
-    
-    .mejs__horizontal-volume-current {
-        background: linear-gradient(90deg, #00FF41 0%, #00A8FF 100%) !important;
-        box-shadow: 0 0 4px rgba(0, 255, 65, 0.6) !important;
-    }
-    
-    /* Winamp 스타일 체크박스 */
-    .stCheckbox > label {
-        color: #00FF41 !important;
-        font-family: 'Courier New', monospace !important;
-        text-shadow: 0 0 4px rgba(0, 255, 65, 0.6) !important;
-    }
-    
-    /* 전체 배경 */
-    .stApp {
-        background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%) !important;
-    }
-    
-    /* 제목 스타일 */
-    h1, h2, h3 {
-        color: #00FF41 !important;
-        font-family: 'Courier New', monospace !important;
-        text-shadow: 0 0 8px rgba(0, 255, 65, 0.8) !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
     if st.session_state.df is None:
-        st.info("👈 왼쪽 사이드바에서 데이터를 입력해주세요.")
         st.markdown("""
-        ### 사용 방법
-        1. **데이터 입력**:
-           - **CSV 파일**: English와 Korean 열이 포함된 CSV 파일 업로드
-           - **텍스트 붙여넣기**: 영어 문장을 복사해서 붙여넣기 (선택적으로 한국어 번역 포함)
-        2. **모드 선택**: 개별 반복, 전체 루프, 쉐도잉 중 선택
-        3. **학습 시작**: 재생 버튼을 눌러 학습 시작
-
-        ### 3가지 학습 모드
-        - **개별 반복**: 한 문장을 여러 번 반복한 후 다음으로 진행
-        - **전체 루프**: 모든 문장을 처음부터 끝까지 여러 번 반복
-        - **쉐도잉**: 음성 재생 후 따라 말할 시간을 제공
-
-        ### 텍스트 붙여넣기 예시
-        사이드바에서 "텍스트 붙여넣기"를 선택한 후:
-        ```
-        I love learning English.
-        Practice makes perfect.
-        Every day is a new opportunity.
-        ```
-        """)
+        <div style="text-align: center; margin-top: 100px;">
+            <h1 style="color: #00ff00; font-family: Courier New, monospace; text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);">
+                🎧 ENGLISH PRACTICE - WINAMP STYLE
+            </h1>
+            <p style="color: #00aaaa; font-family: Courier New, monospace; font-size: 16px;">
+                ← Load sentences from sidebar to start
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
         return
 
     df = st.session_state.df
-
-    # ===== 미디어 플레이어 스타일 메인 컨테이너 =====
     current_idx = st.session_state.current_index
     if current_idx >= len(df):
         current_idx = 0
         st.session_state.current_index = 0
 
     current_sentence = df.iloc[current_idx]
-    sentence_stats = get_sentence_stats(current_idx)
 
-    # 현재 문장을 표시할 placeholder 생성
-    current_sentence_display = st.empty()
-    audio_visualizer_placeholder = st.empty()
-    progress_info_placeholder = st.empty()
+    # Winamp 플레이어 - 간단한 버전
+    st.markdown('<div class="winamp-player">', unsafe_allow_html=True)
 
-    # 오디오 시각화 생성 함수
-    def render_audio_visualizer(is_playing=False):
-        """오디오 시각화를 렌더링"""
-        import random
-        bars = []
-        bar_heights = []
-        for i in range(40):
-            if is_playing:
-                height = random.randint(20, 120)
-            else:
-                height = random.randint(5, 30)
-            bar_heights.append(height)
-            delay = i * 0.05
-            bars.append(f'<div class="waveform-bar" style="height: {height}px; animation-delay: {delay}s;"></div>')
-        
-        visualizer_html = f"""
-        <div class="audio-visualizer">
-            <div class="waveform-bars">
-                {''.join(bars)}
-            </div>
-        </div>
-        """
-        return visualizer_html
+    # 헤더
+    st.markdown(f'<div class="winamp-header"><span class="winamp-title">ENGLISH PRACTICE PLAYER</span><span class="winamp-title">{current_idx + 1} of {len(df)}</span></div>', unsafe_allow_html=True)
 
-    # 문장 카드 렌더링 함수
-    def render_sentence_card(sentence_text, translation_text=""):
-        """문장 카드를 미디어 플레이어 스타일로 렌더링"""
-        card_html = f"""
-        <div class="sentence-display">
-            <h2 style='font-size: 36px; margin-bottom: 20px; color: #1a1a1a; font-weight: 600;'>{sentence_text}</h2>
-        """
-        if translation_text and st.session_state.show_translation:
-            card_html += f"<p style='color: #666; font-size: 20px; font-style: italic; margin-top: 10px;'>{translation_text}</p>"
-        card_html += "</div>"
-        return card_html
-
-    # 미디어 플레이어 컨테이너 시작
-    st.markdown('<div class="media-player-container">', unsafe_allow_html=True)
-    
-    # 초기 표시
-    current_sentence_display.markdown(
-        render_sentence_card(current_sentence['English'], current_sentence['Korean']),
-        unsafe_allow_html=True
-    )
-    audio_visualizer_placeholder.markdown(
-        render_audio_visualizer(is_playing=False),
-        unsafe_allow_html=True
-    )
-
-    # 진행 정보 표시 (Winamp 스타일)
-    progress_percentage = ((current_idx + 1) / len(df)) * 100
-    progress_html = f"""
-    <div class="progress-container">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #00FF41; font-weight: bold; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 255, 65, 0.8);">
-            <span>문장 {current_idx + 1} / {len(df)}</span>
-            <span>{progress_percentage:.1f}%</span>
-        </div>
-        <div style="background: #1a1a1a; height: 10px; border: 1px solid #4a4a4a; border-radius: 2px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);">
-            <div style="background: linear-gradient(90deg, #00FF41 0%, #00A8FF 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease; box-shadow: 0 0 6px rgba(0, 255, 65, 0.6);"></div>
-        </div>
-    </div>
-    """
-    progress_info_placeholder.markdown(progress_html, unsafe_allow_html=True)
-
-    # 통계 카드들
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.markdown(f"""
-        <div class="stat-card">
-            <div style="font-size: 24px; font-weight: bold; color: #00FF41; font-family: 'Courier New', monospace; text-shadow: 0 0 6px rgba(0, 255, 65, 0.8);">{sentence_stats['listen_count']}</div>
-            <div style="font-size: 12px; color: #00A8FF; margin-top: 5px; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 168, 255, 0.6);">재생 횟수</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        mastered_count = len(st.session_state.mastered_sentences)
-        st.markdown(f"""
-        <div class="stat-card">
-            <div style="font-size: 24px; font-weight: bold; color: #00FF41; font-family: 'Courier New', monospace; text-shadow: 0 0 6px rgba(0, 255, 65, 0.8);">{mastered_count}</div>
-            <div style="font-size: 12px; color: #00A8FF; margin-top: 5px; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 168, 255, 0.6);">마스터 완료</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        total_practiced = len(st.session_state.practice_stats)
-        st.markdown(f"""
-        <div class="stat-card">
-            <div style="font-size: 24px; font-weight: bold; color: #00FF41; font-family: 'Courier New', monospace; text-shadow: 0 0 6px rgba(0, 255, 65, 0.8);">{total_practiced}</div>
-            <div style="font-size: 12px; color: #00A8FF; margin-top: 5px; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 168, 255, 0.6);">연습한 문장</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col4:
-        mode_icon = "🔁" if st.session_state.repeat_mode == "전체 루프" else "🔂" if st.session_state.repeat_mode == "개별 반복" else "🎤"
-        st.markdown(f"""
-        <div class="stat-card">
-            <div style="font-size: 24px; font-weight: bold; color: #00FF41; font-family: 'Courier New', monospace; text-shadow: 0 0 6px rgba(0, 255, 65, 0.8);">{mode_icon}</div>
-            <div style="font-size: 12px; color: #00A8FF; margin-top: 5px; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 168, 255, 0.6);">{st.session_state.repeat_mode}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # 마스터 체크박스
-    is_mastered = current_idx in st.session_state.mastered_sentences
-    if st.checkbox("✓ 마스터 완료", value=is_mastered, key=f"master_{current_idx}"):
-        st.session_state.mastered_sentences.add(current_idx)
-    else:
-        st.session_state.mastered_sentences.discard(current_idx)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # 미디어 플레이어 컨테이너 종료
+    # 디스플레이
+    st.markdown('<div class="winamp-display">', unsafe_allow_html=True)
+    st.markdown('<div class="winamp-time">00:00</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="winamp-text">{current_sentence["English"]}</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ===== 미디어 플레이어 스타일 컨트롤 버튼들 =====
-    col1, col2, col3, col4, col5 = st.columns([1, 1, 2, 1, 1])
+    # 비주얼라이저
+    viz_bars = ''.join([f'<div class="viz-bar" style="height: {i*3}px; animation-delay: {i*0.05}s;"></div>' for i in range(1, 21)])
+    viz_bars += ''.join([f'<div class="viz-bar" style="height: {(20-i)*3}px; animation-delay: {(20+i)*0.05}s;"></div>' for i in range(1, 21)])
+    st.markdown(f'<div class="visualizer">{viz_bars}</div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # MediaElement.js 플레이어
+    audio_placeholder = st.empty()
+
+    # 컨트롤 버튼
+    col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
 
     with col1:
-        if st.button("⏮", use_container_width=True, help="이전 문장"):
+        if st.button("⏮ PREV", use_container_width=True):
             if st.session_state.current_index > 0:
                 st.session_state.current_index -= 1
             else:
@@ -647,324 +448,48 @@ def main():
             st.rerun()
 
     with col2:
-        if st.button("⏪", use_container_width=True, help="처음으로"):
+        if st.button("⏪ FIRST", use_container_width=True):
             st.session_state.current_index = 0
             st.rerun()
 
     with col3:
-        play_button_clicked = st.button("▶️ 재생", use_container_width=True, type="primary", help="재생/일시정지")
-        if play_button_clicked:
-            # 개별 반복 모드인 경우
-            if st.session_state.repeat_mode == "개별 반복":
-                repeat_count = st.session_state.target_repeats
-                progress_placeholder = st.empty()
-                audio_container = st.container()
-
-                # 자동 재생이 활성화된 경우 현재 문장부터 끝까지 재생
-                if st.session_state.auto_play:
-                    start_idx = current_idx
-                    for idx in range(start_idx, len(df)):
-                        row = df.iloc[idx]
-
-                        # 화면 업데이트
-                        current_sentence_display.markdown(
-                            render_sentence_card(row['English'], row['Korean']),
-                            unsafe_allow_html=True
-                        )
-                        audio_visualizer_placeholder.markdown(
-                            render_audio_visualizer(is_playing=True),
-                            unsafe_allow_html=True
-                        )
-                        
-                        # 진행 정보 업데이트
-                        progress_percentage = ((idx + 1) / len(df)) * 100
-                        progress_html = f"""
-                        <div class="progress-container">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #00FF41; font-weight: bold; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 255, 65, 0.8);">
-                                <span>문장 {idx + 1} / {len(df)}</span>
-                                <span>{progress_percentage:.1f}%</span>
-                            </div>
-                            <div style="background: #1a1a1a; height: 10px; border: 1px solid #4a4a4a; border-radius: 2px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);">
-                                <div style="background: linear-gradient(90deg, #00FF41 0%, #00A8FF 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease; box-shadow: 0 0 6px rgba(0, 255, 65, 0.6);"></div>
-                            </div>
-                        </div>
-                        """
-                        progress_info_placeholder.markdown(progress_html, unsafe_allow_html=True)
-
-                        # 각 문장을 반복 횟수만큼 재생
-                        for i in range(repeat_count):
-                            progress_placeholder.info(f"🔊 **{idx + 1}/{len(df)} 문장 - {i+1}/{repeat_count}회 재생 중...**")
-
-                            with audio_container:
-                                audio_placeholder = st.empty()
-                                audio_duration = play_audio_with_stats(
-                                    row['English'],
-                                    idx,
-                                    st.session_state.playback_speed,
-                                    autoplay=True,
-                                    audio_placeholder=audio_placeholder
-                                )
-
-                            # 실제 오디오 재생 시간만큼 대기
-                            time.sleep(audio_duration)
-
-                        # 문장 간 간격
-                        if idx < len(df) - 1:
-                            time.sleep(st.session_state.auto_play_interval)
-
-                        # 현재 인덱스 업데이트
-                        st.session_state.current_index = idx
-
-                    # 다음 문장으로 이동
-                    st.session_state.current_index = (st.session_state.current_index + 1) % len(df)
-                    audio_visualizer_placeholder.markdown(
-                        render_audio_visualizer(is_playing=False),
-                        unsafe_allow_html=True
-                    )
-                    progress_placeholder.success(f"✓ 자동 재생 완료!")
-
-                # 수동 재생 (현재 문장만)
-                else:
-                    audio_visualizer_placeholder.markdown(
-                        render_audio_visualizer(is_playing=True),
-                        unsafe_allow_html=True
-                    )
-                    for i in range(repeat_count):
-                        progress_placeholder.info(f"🔊 **{i+1}/{repeat_count}회 재생 중...**")
-
-                        with audio_container:
-                            audio_placeholder = st.empty()
-                            audio_duration = play_audio_with_stats(
-                                current_sentence['English'],
-                                current_idx,
-                                st.session_state.playback_speed,
-                                autoplay=True,
-                                audio_placeholder=audio_placeholder
-                            )
-
-                        # 실제 오디오 재생 시간만큼 대기
-                        time.sleep(audio_duration)
-
-                    audio_visualizer_placeholder.markdown(
-                        render_audio_visualizer(is_playing=False),
-                        unsafe_allow_html=True
-                    )
-                    progress_placeholder.success(f"✓ {repeat_count}번 반복 완료!")
-
-            # 쉐도잉 모드인 경우
-            elif st.session_state.repeat_mode == "쉐도잉":
-                progress_placeholder = st.empty()
-                audio_container = st.container()
-
-                # 자동 재생이 활성화된 경우
-                if st.session_state.auto_play:
-                    start_idx = current_idx
-                    for idx in range(start_idx, len(df)):
-                        row = df.iloc[idx]
-
-                        # 화면 업데이트
-                        current_sentence_display.markdown(
-                            render_sentence_card(row['English'], row['Korean']),
-                            unsafe_allow_html=True
-                        )
-                        audio_visualizer_placeholder.markdown(
-                            render_audio_visualizer(is_playing=True),
-                            unsafe_allow_html=True
-                        )
-                        
-                        # 진행 정보 업데이트
-                        progress_percentage = ((idx + 1) / len(df)) * 100
-                        progress_html = f"""
-                        <div class="progress-container">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #00FF41; font-weight: bold; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 255, 65, 0.8);">
-                                <span>문장 {idx + 1} / {len(df)}</span>
-                                <span>{progress_percentage:.1f}%</span>
-                            </div>
-                            <div style="background: #1a1a1a; height: 10px; border: 1px solid #4a4a4a; border-radius: 2px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);">
-                                <div style="background: linear-gradient(90deg, #00FF41 0%, #00A8FF 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease; box-shadow: 0 0 6px rgba(0, 255, 65, 0.6);"></div>
-                            </div>
-                        </div>
-                        """
-                        progress_info_placeholder.markdown(progress_html, unsafe_allow_html=True)
-
-                        # 재생
-                        progress_placeholder.info(f"🔊 **{idx + 1}/{len(df)} 문장 재생 중...**")
-                        with audio_container:
-                            audio_placeholder = st.empty()
-                            audio_duration = play_audio_with_stats(
-                                row['English'],
-                                idx,
-                                st.session_state.playback_speed,
-                                autoplay=True,
-                                audio_placeholder=audio_placeholder
-                            )
-
-                        # 실제 오디오 재생 시간만큼 대기
-                        time.sleep(audio_duration)
-
-                        # 쉐도잉 시간
-                        audio_visualizer_placeholder.markdown(
-                            render_audio_visualizer(is_playing=False),
-                            unsafe_allow_html=True
-                        )
-                        progress_placeholder.info(f"🎤 **따라 말하세요... ({st.session_state.shadowing_delay}초)**")
-                        time.sleep(st.session_state.shadowing_delay)
-
-                        # 문장 간 간격
-                        if idx < len(df) - 1:
-                            time.sleep(st.session_state.auto_play_interval)
-
-                        # 현재 인덱스 업데이트
-                        st.session_state.current_index = idx
-
-                    # 다음 문장으로 이동
-                    st.session_state.current_index = (st.session_state.current_index + 1) % len(df)
-                    progress_placeholder.success("✓ 쉐도잉 자동 재생 완료!")
-
-                # 수동 재생 (현재 문장만)
-                else:
-                    audio_visualizer_placeholder.markdown(
-                        render_audio_visualizer(is_playing=True),
-                        unsafe_allow_html=True
-                    )
-                    progress_placeholder.info("🔊 **재생 중...**")
-                    with audio_container:
-                        audio_placeholder = st.empty()
-                        audio_duration = play_audio_with_stats(
-                            current_sentence['English'],
-                            current_idx,
-                            st.session_state.playback_speed,
-                            autoplay=True,
-                            audio_placeholder=audio_placeholder
-                        )
-
-                    # 실제 오디오 재생 시간만큼 대기
-                    time.sleep(audio_duration)
-
-                    audio_visualizer_placeholder.markdown(
-                        render_audio_visualizer(is_playing=False),
-                        unsafe_allow_html=True
-                    )
-                    progress_placeholder.info(f"🎤 **따라 말하세요... ({st.session_state.shadowing_delay}초)**")
-                    time.sleep(st.session_state.shadowing_delay)
-
-                    progress_placeholder.success("✓ 다음 문장으로 이동할 수 있습니다!")
-
-            # 전체 루프 모드인 경우
-            else:
-                progress_placeholder = st.empty()
-                audio_container = st.container()
-
-                # 자동 재생이 활성화된 경우
-                if st.session_state.auto_play:
-                    start_idx = current_idx
-                    for idx in range(start_idx, len(df)):
-                        row = df.iloc[idx]
-
-                        # 화면 업데이트
-                        current_sentence_display.markdown(
-                            render_sentence_card(row['English'], row['Korean']),
-                            unsafe_allow_html=True
-                        )
-                        audio_visualizer_placeholder.markdown(
-                            render_audio_visualizer(is_playing=True),
-                            unsafe_allow_html=True
-                        )
-                        
-                        # 진행 정보 업데이트
-                        progress_percentage = ((idx + 1) / len(df)) * 100
-                        progress_html = f"""
-                        <div class="progress-container">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #00FF41; font-weight: bold; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 255, 65, 0.8);">
-                                <span>문장 {idx + 1} / {len(df)}</span>
-                                <span>{progress_percentage:.1f}%</span>
-                            </div>
-                            <div style="background: #1a1a1a; height: 10px; border: 1px solid #4a4a4a; border-radius: 2px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);">
-                                <div style="background: linear-gradient(90deg, #00FF41 0%, #00A8FF 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease; box-shadow: 0 0 6px rgba(0, 255, 65, 0.6);"></div>
-                            </div>
-                        </div>
-                        """
-                        progress_info_placeholder.markdown(progress_html, unsafe_allow_html=True)
-
-                        # 재생
-                        progress_placeholder.info(f"🔊 **{idx + 1}/{len(df)} 문장 재생 중...**")
-                        with audio_container:
-                            audio_placeholder = st.empty()
-                            audio_duration = play_audio_with_stats(
-                                row['English'],
-                                idx,
-                                st.session_state.playback_speed,
-                                autoplay=True,
-                                audio_placeholder=audio_placeholder
-                            )
-
-                        # 실제 오디오 재생 시간만큼 대기
-                        time.sleep(audio_duration)
-
-                        # 문장 간 간격
-                        if idx < len(df) - 1:
-                            time.sleep(st.session_state.auto_play_interval)
-
-                        # 현재 인덱스 업데이트
-                        st.session_state.current_index = idx
-
-                    # 다음 문장으로 이동
-                    st.session_state.current_index = (st.session_state.current_index + 1) % len(df)
-                    audio_visualizer_placeholder.markdown(
-                        render_audio_visualizer(is_playing=False),
-                        unsafe_allow_html=True
-                    )
-                    progress_placeholder.success("✓ 자동 재생 완료!")
-
-                # 수동 재생 (현재 문장만)
-                else:
-                    audio_visualizer_placeholder.markdown(
-                        render_audio_visualizer(is_playing=True),
-                        unsafe_allow_html=True
-                    )
-                    progress_placeholder.info("🔊 **재생 중...**")
-                    with audio_container:
-                        audio_placeholder = st.empty()
-                        audio_duration = play_audio_with_stats(
-                            current_sentence['English'],
-                            current_idx,
-                            st.session_state.playback_speed,
-                            autoplay=True,
-                            audio_placeholder=audio_placeholder
-                        )
-
-                    # 실제 오디오 재생 시간만큼 대기
-                    time.sleep(audio_duration)
-
-                    audio_visualizer_placeholder.markdown(
-                        render_audio_visualizer(is_playing=False),
-                        unsafe_allow_html=True
-                    )
-                    progress_placeholder.success("✓ 재생 완료!")
+        if st.button("▶️ PLAY", use_container_width=True, type="primary"):
+            play_audio_with_stats_v2(
+                current_sentence['English'],
+                current_idx,
+                st.session_state.playback_speed,
+                audio_placeholder
+            )
 
     with col4:
-        if st.button("⏩", use_container_width=True, help="마지막으로"):
+        if st.button("⏩ LAST", use_container_width=True):
             st.session_state.current_index = len(df) - 1
             st.rerun()
 
     with col5:
-        if st.button("⏭", use_container_width=True, help="다음 문장"):
-            # 다음 문장으로 이동
+        if st.button("⏭ NEXT", use_container_width=True):
             st.session_state.current_index = (st.session_state.current_index + 1) % len(df)
-
-            # 전체 루프 모드인 경우, 처음으로 돌아왔을 때 루프 카운트 증가
-            if st.session_state.repeat_mode == "전체 루프" and st.session_state.current_index == 0:
-                st.session_state.loop_count += 1
-                if st.session_state.loop_count >= st.session_state.loop_target:
-                    st.balloons()
-                    st.success(f"🎉 목표 달성! {st.session_state.loop_target}회 루프 완료!")
-
             st.rerun()
 
     st.divider()
 
-    # ===== 하단: 전체 문장 리스트 =====
-    display_transcript_list(df)
+    # Winamp 플레이리스트
+    st.markdown('<div class="winamp-playlist">', unsafe_allow_html=True)
+    st.markdown(f'<div class="playlist-header">PLAYLIST - {len(df)} SENTENCES</div>', unsafe_allow_html=True)
+    st.markdown('<div class="playlist-content">', unsafe_allow_html=True)
+
+    for idx, row in df.iterrows():
+        is_current = idx == st.session_state.current_index
+        item_class = "playlist-item-current" if is_current else "playlist-item"
+
+        # 시간 계산
+        total_sec = idx * 5
+        timestamp = f"{total_sec // 60:02d}:{total_sec % 60:02d}"
+
+        sentence_html = f'<div class="{item_class}">{idx + 1}. {row["English"]}<span class="playlist-time">{timestamp}</span></div>'
+        st.markdown(sentence_html, unsafe_allow_html=True)
+
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
 
 if __name__ == "__main__":

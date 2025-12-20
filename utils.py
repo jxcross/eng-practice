@@ -8,9 +8,6 @@ import pandas as pd
 from gtts import gTTS
 from io import BytesIO
 from datetime import datetime
-import json
-import plotly.graph_objects as go
-import plotly.express as px
 from pydub import AudioSegment
 
 
@@ -29,13 +26,9 @@ def initialize_session_state():
 
     # 재생 모드 관련
     if 'repeat_mode' not in st.session_state:
-        st.session_state.repeat_mode = "개별 반복"  # "개별 반복", "전체 루프", "쉐도잉"
+        st.session_state.repeat_mode = "Individual"
     if 'playback_speed' not in st.session_state:
         st.session_state.playback_speed = 1.0
-    if 'auto_play' not in st.session_state:
-        st.session_state.auto_play = False
-    if 'auto_play_interval' not in st.session_state:
-        st.session_state.auto_play_interval = 1
 
     # 반복 설정
     if 'target_repeats' not in st.session_state:
@@ -50,22 +43,12 @@ def initialize_session_state():
     # 진행 추적
     if 'practice_stats' not in st.session_state:
         st.session_state.practice_stats = {}
-    if 'mastered_sentences' not in st.session_state:
-        st.session_state.mastered_sentences = set()
 
     # 세션 정보
     if 'session_start_time' not in st.session_state:
         st.session_state.session_start_time = datetime.now()
     if 'total_listens' not in st.session_state:
         st.session_state.total_listens = 0
-
-    # UI 설정
-    if 'dark_mode' not in st.session_state:
-        st.session_state.dark_mode = False
-    if 'show_translation' not in st.session_state:
-        st.session_state.show_translation = True
-    if 'show_stats' not in st.session_state:
-        st.session_state.show_stats = True
 
     # Audio cache
     if 'audio_cache' not in st.session_state:
@@ -74,56 +57,6 @@ def initialize_session_state():
         st.session_state.audio_durations = {}  # {index: duration_seconds}
 
 
-def save_session_to_json() -> str:
-    """세션 상태를 JSON 문자열로 저장합니다."""
-
-    # datetime을 직렬화하기 위한 헬퍼 함수
-    def serialize_datetime(obj):
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        raise TypeError(f"Type {type(obj)} not serializable")
-
-    # 세션 데이터 준비
-    session_data = {
-        'practice_stats': st.session_state.practice_stats,
-        'mastered_sentences': list(st.session_state.mastered_sentences),
-        'current_index': st.session_state.current_index,
-        'session_start_time': st.session_state.session_start_time.isoformat(),
-        'total_listens': st.session_state.total_listens,
-        'loop_count': st.session_state.loop_count,
-        'timestamp': datetime.now().isoformat(),
-    }
-
-    return json.dumps(session_data, indent=2, ensure_ascii=False, default=serialize_datetime)
-
-
-def load_session_from_json(json_str: str) -> bool:
-    """JSON 문자열에서 세션 상태를 복원합니다."""
-
-    try:
-        data = json.loads(json_str)
-
-        # practice_stats의 키를 문자열에서 정수로 변환
-        practice_stats = {}
-        for key, value in data.get('practice_stats', {}).items():
-            practice_stats[int(key)] = {
-                'listen_count': value.get('listen_count', 0),
-                'repeat_count': value.get('repeat_count', 0),
-                'first_practiced': datetime.fromisoformat(value['first_practiced']) if 'first_practiced' in value else datetime.now(),
-                'last_practiced': datetime.fromisoformat(value['last_practiced']) if 'last_practiced' in value else datetime.now(),
-            }
-
-        st.session_state.practice_stats = practice_stats
-        st.session_state.mastered_sentences = set(data.get('mastered_sentences', []))
-        st.session_state.current_index = data.get('current_index', 0)
-        st.session_state.total_listens = data.get('total_listens', 0)
-        st.session_state.loop_count = data.get('loop_count', 0)
-        st.session_state.session_start_time = datetime.fromisoformat(data.get('session_start_time', datetime.now().isoformat()))
-
-        return True
-    except Exception as e:
-        st.error(f"세션 로드 실패: {str(e)}")
-        return False
 
 
 # ============================================================
@@ -432,291 +365,77 @@ def play_audio_with_stats(text: str, index: int, speed: float = 1.0, autoplay: b
 # UI 헬퍼 함수
 # ============================================================
 
-def apply_custom_css(dark_mode: bool = False):
-    """커스텀 CSS를 적용합니다."""
 
-    if dark_mode:
-        css = """
-        <style>
-        /* Winamp 스타일 다크 모드 - 기본적으로 Winamp 스타일이므로 동일하게 유지 */
-        .stApp {
-            background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%) !important;
-            color: #00FF41 !important;
-        }
-        .stMarkdown, .stText {
-            color: #00A8FF !important;
-            font-family: 'Courier New', monospace !important;
-        }
-        h1, h2, h3, h4, h5, h6 {
-            color: #00FF41 !important;
-            font-family: 'Courier New', monospace !important;
-            text-shadow: 0 0 8px rgba(0, 255, 65, 0.8) !important;
-        }
+def play_audio_with_stats_v2(text: str, index: int, speed: float = 1.0, audio_placeholder=None) -> float:
+    """오디오를 재생합니다.
 
-        /* Winamp 스타일 문장 카드 */
-        div[style*="background-color: #f8f9fa"] {
-            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
-            border: 2px solid #4a4a4a !important;
-        }
-        
-        .sentence-display {
-            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
-            border: 2px solid #4a4a4a !important;
-        }
-        .sentence-display h2 {
-            color: #00FF41 !important;
-            text-shadow: 0 0 8px rgba(0, 255, 65, 0.8) !important;
-        }
-        .sentence-display p {
-            color: #00A8FF !important;
-            text-shadow: 0 0 4px rgba(0, 168, 255, 0.6) !important;
-        }
-        .media-player-container {
-            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
-            border: 2px solid #4a4a4a !important;
-        }
-        .audio-visualizer {
-            background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%) !important;
-            border: 2px solid #4a4a4a !important;
-        }
-        
-        /* Winamp 스타일 MediaElement.js 플레이어 */
-        .mejs__container {
-            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
-            border: 2px solid #4a4a4a !important;
-        }
-        .mejs__button > button {
-            color: #00FF41 !important;
-            text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
-        }
-        .mejs__time {
-            color: #00FF41 !important;
-            font-family: 'Courier New', monospace !important;
-            text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
-        }
-        .mejs__time-rail {
-            background: #1a1a1a !important;
-            border: 1px solid #4a4a4a !important;
-        }
-        .mejs__time-loaded {
-            background: #2a2a2a !important;
-        }
-        .mejs__volume-button > button {
-            color: #00FF41 !important;
-            text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
-        }
-        .mejs__horizontal-volume-slider {
-            background: #1a1a1a !important;
-            border: 1px solid #4a4a4a !important;
-        }
+    Returns:
+        float: 오디오 재생 시간(초)
+    """
 
-        /* Winamp 스타일 플레이리스트 */
-        .transcript-current {
-            background: linear-gradient(90deg, #1a3a5a 0%, #2a4a6a 100%) !important;
-            border-left: 3px solid #00FF41 !important;
-            color: #00FF41 !important;
-        }
-        .transcript-row:hover {
-            background: linear-gradient(90deg, #2a2a2a 0%, #3a3a3a 100%) !important;
-        }
-        .timestamp {
-            color: #00A8FF !important;
-            font-family: 'Courier New', monospace !important;
-        }
-        .badge {
-            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
-            border: 1px solid #4a4a4a !important;
-            color: #00FF41 !important;
-            font-family: 'Courier New', monospace !important;
-        }
-        .badge-master {
-            background: linear-gradient(180deg, #00FF41 0%, #00A8FF 100%) !important;
-            color: #000000 !important;
-            font-weight: bold !important;
-        }
-        </style>
-        """
-    else:
-        css = """
-        <style>
-        .stApp {
-            background-color: #FFFFFF;
-            color: #000000;
-        }
-        </style>
-        """
-
-    st.markdown(css, unsafe_allow_html=True)
-
-
-def display_transcript_list(df: pd.DataFrame):
-    """Display sentences as media player transcript with timestamps."""
-
-    st.subheader("📝 전체 문장")
-
-    # Winamp 스타일 플레이리스트 CSS
-    st.markdown("""
-    <style>
-    .transcript-row {
-        padding: 8px 12px;
-        border-bottom: 1px solid #4a4a4a;
-        cursor: pointer;
-        transition: all 0.2s;
-        background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
-        border-left: 2px solid transparent;
-    }
-    .transcript-row:hover {
-        background: linear-gradient(90deg, #2a2a2a 0%, #3a3a3a 100%) !important;
-        border-left: 2px solid #00FF41;
-    }
-    .transcript-current {
-        background: linear-gradient(90deg, #1a3a5a 0%, #2a4a6a 100%) !important;
-        border-left: 3px solid #00FF41 !important;
-        font-weight: bold !important;
-        color: #00FF41 !important;
-        text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
-    }
-    .timestamp {
-        font-family: 'Courier New', monospace !important;
-        color: #00A8FF !important;
-        font-size: 14px !important;
-        text-align: right !important;
-        text-shadow: 0 0 4px rgba(0, 168, 255, 0.6) !important;
-    }
-    .badge {
-        display: inline-block;
-        padding: 2px 6px;
-        border-radius: 2px;
-        font-size: 11px;
-        margin-left: 6px;
-        background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
-        border: 1px solid #4a4a4a;
-        color: #00FF41;
-        font-family: 'Courier New', monospace;
-        text-shadow: 0 0 4px rgba(0, 255, 65, 0.6);
-    }
-    .badge-master {
-        background: linear-gradient(180deg, #00FF41 0%, #00A8FF 100%) !important;
-        color: #000000 !important;
-        font-weight: bold !important;
-        border: 1px solid #00FF41 !important;
-        text-shadow: none !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # Each sentence row
-    for idx, row in df.iterrows():
-        is_current = idx == st.session_state.current_index
-        is_mastered = idx in st.session_state.mastered_sentences
-        stats = get_sentence_stats(idx)
-
-        # Get timestamp
-        if 'Time' in df.columns:
-            time_val = str(df.iloc[idx]['Time'])
-            # Parse "5s", "10s" format
-            if 's' in time_val.lower():
-                seconds = int(time_val.lower().replace('s', ''))
-                timestamp = f"{seconds // 60:02d}:{seconds % 60:02d}"
-            else:
-                timestamp = time_val
+    try:
+        # 캐시에서 오디오를 가져오거나 생성
+        if index in st.session_state.audio_cache:
+            audio_bytes = st.session_state.audio_cache[index]
+            base_duration = st.session_state.audio_durations[index]
+            duration = base_duration / speed
         else:
-            # Sequential: 5 seconds per sentence
-            total_sec = idx * 5
-            timestamp = f"{total_sec // 60:02d}:{total_sec % 60:02d}"
+            audio_bytes, duration = generate_audio(text, speed)
 
-        # 2-column layout: sentence + timestamp
-        col1, col2 = st.columns([6, 1])
+        # HTML5 오디오 플레이어 (자동 재생)
+        import base64
+        import time as time_module
+        audio_base64 = base64.b64encode(audio_bytes).decode()
+        unique_id = f"audio_{int(time_module.time() * 1000000)}"
 
-        with col1:
-            # Build sentence text with badges
-            sentence_text = row['English']
+        audio_html = f"""
+        <audio id="{unique_id}" controls autoplay style="width: 100%; margin: 10px 0;">
+            <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
+        </audio>
+        <script>
+            (function() {{
+                var audio = document.getElementById('{unique_id}');
+                if (audio) {{
+                    audio.playbackRate = {speed};
+                    audio.volume = 0.8;
 
-            # Clickable button
-            if st.button(
-                sentence_text,
-                key=f"transcript_{idx}",
-                use_container_width=True,
-                type="primary" if is_current else "secondary"
-            ):
-                st.session_state.current_index = idx
-                st.rerun()
+                    // 자동 재생 시도
+                    var playPromise = audio.play();
+                    if (playPromise !== undefined) {{
+                        playPromise.catch(function(error) {{
+                            console.log('Auto-play prevented:', error);
+                        }});
+                    }}
+                }}
+            }})();
+        </script>
+        """
 
-            # Show badges below button
-            badges_html = ""
-            if is_mastered:
-                badges_html += '<span class="badge badge-master">✓ 마스터</span>'
-            if stats['listen_count'] > 0:
-                badges_html += f'<span class="badge">🎧 {stats["listen_count"]}회</span>'
+        # 플레이어 렌더링
+        if audio_placeholder is not None:
+            audio_placeholder.empty()
+            audio_placeholder.markdown(audio_html, unsafe_allow_html=True)
+        else:
+            st.markdown(audio_html, unsafe_allow_html=True)
 
-            if badges_html:
-                st.markdown(badges_html, unsafe_allow_html=True)
+        # 통계 업데이트
+        st.session_state.total_listens += 1
 
-        with col2:
-            st.markdown(f'<div class="timestamp">{timestamp}</div>', unsafe_allow_html=True)
+        if index not in st.session_state.practice_stats:
+            st.session_state.practice_stats[index] = {
+                'listen_count': 0,
+                'repeat_count': 0,
+                'first_practiced': datetime.now(),
+                'last_practiced': datetime.now(),
+            }
 
-        # Add divider except for last row
-        if idx < len(df) - 1:
-            st.markdown('<hr style="margin: 4px 0; border-color: #f0f0f0;">', unsafe_allow_html=True)
+        st.session_state.practice_stats[index]['listen_count'] += 1
+        st.session_state.practice_stats[index]['last_practiced'] = datetime.now()
 
+        return duration
 
-def display_practice_chart():
-    """연습 통계 차트를 표시합니다."""
-
-    stats = st.session_state.practice_stats
-
-    if not stats:
-        st.info("아직 연습 기록이 없습니다.")
-        return
-
-    # 데이터 준비
-    indices = sorted(stats.keys())
-    listen_counts = [stats[i]['listen_count'] for i in indices]
-
-    # Plotly 막대 그래프
-    fig = go.Figure(data=[
-        go.Bar(
-            name='청취 횟수',
-            x=[f"문장 {i+1}" for i in indices],
-            y=listen_counts,
-            marker_color='lightblue'
-        )
-    ])
-
-    fig.update_layout(
-        title="문장별 연습 횟수",
-        xaxis_title="문장",
-        yaxis_title="횟수",
-        height=400,
-        showlegend=False
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
+    except Exception as e:
+        st.error(f"❌ 오디오 재생 실패: {str(e)}")
+        return 0.0
 
 
-def display_session_stats():
-    """세션 통계를 표시합니다."""
-
-    # 세션 시간 계산
-    duration = datetime.now() - st.session_state.session_start_time
-    hours = int(duration.total_seconds() // 3600)
-    minutes = int((duration.total_seconds() % 3600) // 60)
-    seconds = int(duration.total_seconds() % 60)
-
-    # 통계 표시
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.metric("세션 시간", f"{hours:02d}:{minutes:02d}:{seconds:02d}")
-        st.metric("총 청취 횟수", st.session_state.total_listens)
-
-    with col2:
-        practiced = len(st.session_state.practice_stats)
-        st.metric("연습한 문장 수", practiced)
-        st.metric("완료한 루프", st.session_state.loop_count)
-
-    # 마스터한 문장 목록
-    if st.session_state.mastered_sentences:
-        st.write("**마스터한 문장:**")
-        mastered_list = sorted(list(st.session_state.mastered_sentences))
-        st.write(", ".join([f"문장 {i+1}" for i in mastered_list]))
