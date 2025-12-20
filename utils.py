@@ -412,6 +412,23 @@ def apply_custom_css(dark_mode: bool = False):
             background-color: #2a2a2a !important;
             border-color: #404040 !important;
         }
+        
+        /* Dark mode for media player */
+        .sentence-display {
+            background: rgba(42, 42, 42, 0.95) !important;
+        }
+        .sentence-display h2 {
+            color: #E0E0E0 !important;
+        }
+        .sentence-display p {
+            color: #999 !important;
+        }
+        .media-player-container {
+            background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%) !important;
+        }
+        .audio-visualizer {
+            background: linear-gradient(180deg, #0a0a0a 0%, #1a1a2e 100%) !important;
+        }
 
         /* Dark mode for transcript list */
         .transcript-current {

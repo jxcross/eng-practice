@@ -245,7 +245,74 @@ def main():
             st.rerun()
 
     # ========== 메인 영역 ==========
-    st.title("🎧 영어 문장 반복 연습 프로그램")
+    # 미디어 플레이어 스타일 CSS
+    st.markdown("""
+    <style>
+    .media-player-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 30px;
+        margin: 20px 0;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    .audio-visualizer {
+        background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+        border-radius: 15px;
+        padding: 40px 20px;
+        margin: 20px 0;
+        min-height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .waveform-bars {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        height: 120px;
+    }
+    .waveform-bar {
+        width: 6px;
+        background: linear-gradient(180deg, #00d4ff 0%, #5b86e5 100%);
+        border-radius: 3px;
+        animation: wave 1.5s ease-in-out infinite;
+    }
+    @keyframes wave {
+        0%, 100% { transform: scaleY(0.3); opacity: 0.7; }
+        50% { transform: scaleY(1); opacity: 1; }
+    }
+    .sentence-display {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        padding: 30px;
+        margin: 20px 0;
+        text-align: center;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .progress-container {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 15px;
+        margin: 15px 0;
+    }
+    .control-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin: 20px 0;
+    }
+    .stat-card {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        backdrop-filter: blur(10px);
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
     if st.session_state.df is None:
         st.info("👈 왼쪽 사이드바에서 데이터를 입력해주세요.")
@@ -274,70 +341,141 @@ def main():
 
     df = st.session_state.df
 
-    # ===== 중앙: 현재 문장 표시 =====
-
+    # ===== 미디어 플레이어 스타일 메인 컨테이너 =====
     current_idx = st.session_state.current_index
     if current_idx >= len(df):
         current_idx = 0
         st.session_state.current_index = 0
 
     current_sentence = df.iloc[current_idx]
-
-    # 이 문장의 통계
     sentence_stats = get_sentence_stats(current_idx)
 
-    # 현재 문장을 표시할 placeholder 생성 (전체 재생 시 업데이트용)
+    # 현재 문장을 표시할 placeholder 생성
     current_sentence_display = st.empty()
+    audio_visualizer_placeholder = st.empty()
+    progress_info_placeholder = st.empty()
 
-    # 큰 카드 스타일로 문장 표시
+    # 오디오 시각화 생성 함수
+    def render_audio_visualizer(is_playing=False):
+        """오디오 시각화를 렌더링"""
+        import random
+        bars = []
+        bar_heights = []
+        for i in range(40):
+            if is_playing:
+                height = random.randint(20, 120)
+            else:
+                height = random.randint(5, 30)
+            bar_heights.append(height)
+            delay = i * 0.05
+            bars.append(f'<div class="waveform-bar" style="height: {height}px; animation-delay: {delay}s;"></div>')
+        
+        visualizer_html = f"""
+        <div class="audio-visualizer">
+            <div class="waveform-bars">
+                {''.join(bars)}
+            </div>
+        </div>
+        """
+        return visualizer_html
+
+    # 문장 카드 렌더링 함수
     def render_sentence_card(sentence_text, translation_text=""):
-        """문장 카드를 렌더링하는 헬퍼 함수"""
+        """문장 카드를 미디어 플레이어 스타일로 렌더링"""
         card_html = f"""
-        <div style="
-            background-color: #f8f9fa;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            padding: 40px 24px;
-            margin: 24px 0;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        ">
-            <h2 style='font-size: 32px; margin-bottom: 16px; color: #1a1a1a;'>{sentence_text}</h2>
+        <div class="sentence-display">
+            <h2 style='font-size: 36px; margin-bottom: 20px; color: #1a1a1a; font-weight: 600;'>{sentence_text}</h2>
         """
         if translation_text and st.session_state.show_translation:
-            card_html += f"<p style='color: #666; font-size: 18px; font-style: italic; margin-top: 8px;'>{translation_text}</p>"
+            card_html += f"<p style='color: #666; font-size: 20px; font-style: italic; margin-top: 10px;'>{translation_text}</p>"
         card_html += "</div>"
         return card_html
 
-    # 초기 문장 표시
+    # 미디어 플레이어 컨테이너 시작
+    st.markdown('<div class="media-player-container">', unsafe_allow_html=True)
+    
+    # 초기 표시
     current_sentence_display.markdown(
         render_sentence_card(current_sentence['English'], current_sentence['Korean']),
         unsafe_allow_html=True
     )
+    audio_visualizer_placeholder.markdown(
+        render_audio_visualizer(is_playing=False),
+        unsafe_allow_html=True
+    )
 
-    # 문장 아래 정보 행
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # 진행 정보 표시
+    progress_percentage = ((current_idx + 1) / len(df)) * 100
+    progress_html = f"""
+    <div class="progress-container">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: white; font-weight: 600;">
+            <span>문장 {current_idx + 1} / {len(df)}</span>
+            <span>{progress_percentage:.1f}%</span>
+        </div>
+        <div style="background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; overflow: hidden;">
+            <div style="background: linear-gradient(90deg, #00d4ff 0%, #5b86e5 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease;"></div>
+        </div>
+    </div>
+    """
+    progress_info_placeholder.markdown(progress_html, unsafe_allow_html=True)
 
+    # 통계 카드들
+    col1, col2, col3, col4 = st.columns(4)
+    
     with col1:
-        st.caption(f"🎧 {sentence_stats['listen_count']}회 재생")
-
+        st.markdown(f"""
+        <div class="stat-card">
+            <div style="font-size: 24px; font-weight: bold; color: #00d4ff;">{sentence_stats['listen_count']}</div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 5px;">재생 횟수</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
     with col2:
-        is_mastered = current_idx in st.session_state.mastered_sentences
-        if st.checkbox("✓ 마스터 완료", value=is_mastered, key=f"master_{current_idx}"):
-            st.session_state.mastered_sentences.add(current_idx)
-        else:
-            st.session_state.mastered_sentences.discard(current_idx)
-
+        mastered_count = len(st.session_state.mastered_sentences)
+        st.markdown(f"""
+        <div class="stat-card">
+            <div style="font-size: 24px; font-weight: bold; color: #4caf50;">{mastered_count}</div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 5px;">마스터 완료</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
     with col3:
-        st.caption(f"문장 {current_idx + 1} / {len(df)}")
+        total_practiced = len(st.session_state.practice_stats)
+        st.markdown(f"""
+        <div class="stat-card">
+            <div style="font-size: 24px; font-weight: bold; color: #ff9800;">{total_practiced}</div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 5px;">연습한 문장</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        mode_icon = "🔁" if st.session_state.repeat_mode == "전체 루프" else "🔂" if st.session_state.repeat_mode == "개별 반복" else "🎤"
+        st.markdown(f"""
+        <div class="stat-card">
+            <div style="font-size: 24px; font-weight: bold; color: #e91e63;">{mode_icon}</div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 5px;">{st.session_state.repeat_mode}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    st.divider()
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    # ===== 컨트롤 버튼들 =====
-    col1, col2, col3 = st.columns(3)
+    # 마스터 체크박스
+    is_mastered = current_idx in st.session_state.mastered_sentences
+    if st.checkbox("✓ 마스터 완료", value=is_mastered, key=f"master_{current_idx}"):
+        st.session_state.mastered_sentences.add(current_idx)
+    else:
+        st.session_state.mastered_sentences.discard(current_idx)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # 미디어 플레이어 컨테이너 종료
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ===== 미디어 플레이어 스타일 컨트롤 버튼들 =====
+    col1, col2, col3, col4, col5 = st.columns([1, 1, 2, 1, 1])
 
     with col1:
-        if st.button("◀️ 이전", use_container_width=True):
+        if st.button("⏮", use_container_width=True, help="이전 문장"):
             if st.session_state.current_index > 0:
                 st.session_state.current_index -= 1
             else:
@@ -345,7 +483,13 @@ def main():
             st.rerun()
 
     with col2:
-        if st.button("▶️ 재생", use_container_width=True, type="primary"):
+        if st.button("⏪", use_container_width=True, help="처음으로"):
+            st.session_state.current_index = 0
+            st.rerun()
+
+    with col3:
+        play_button_clicked = st.button("▶️ 재생", use_container_width=True, type="primary", help="재생/일시정지")
+        if play_button_clicked:
             # 개별 반복 모드인 경우
             if st.session_state.repeat_mode == "개별 반복":
                 repeat_count = st.session_state.target_repeats
@@ -358,11 +502,30 @@ def main():
                     for idx in range(start_idx, len(df)):
                         row = df.iloc[idx]
 
-                        # 화면 최상단 업데이트
+                        # 화면 업데이트
                         current_sentence_display.markdown(
                             render_sentence_card(row['English'], row['Korean']),
                             unsafe_allow_html=True
                         )
+                        audio_visualizer_placeholder.markdown(
+                            render_audio_visualizer(is_playing=True),
+                            unsafe_allow_html=True
+                        )
+                        
+                        # 진행 정보 업데이트
+                        progress_percentage = ((idx + 1) / len(df)) * 100
+                        progress_html = f"""
+                        <div class="progress-container">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: white; font-weight: 600;">
+                                <span>문장 {idx + 1} / {len(df)}</span>
+                                <span>{progress_percentage:.1f}%</span>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div style="background: linear-gradient(90deg, #00d4ff 0%, #5b86e5 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease;"></div>
+                            </div>
+                        </div>
+                        """
+                        progress_info_placeholder.markdown(progress_html, unsafe_allow_html=True)
 
                         # 각 문장을 반복 횟수만큼 재생
                         for i in range(repeat_count):
@@ -390,10 +553,18 @@ def main():
 
                     # 다음 문장으로 이동
                     st.session_state.current_index = (st.session_state.current_index + 1) % len(df)
+                    audio_visualizer_placeholder.markdown(
+                        render_audio_visualizer(is_playing=False),
+                        unsafe_allow_html=True
+                    )
                     progress_placeholder.success(f"✓ 자동 재생 완료!")
 
                 # 수동 재생 (현재 문장만)
                 else:
+                    audio_visualizer_placeholder.markdown(
+                        render_audio_visualizer(is_playing=True),
+                        unsafe_allow_html=True
+                    )
                     for i in range(repeat_count):
                         progress_placeholder.info(f"🔊 **{i+1}/{repeat_count}회 재생 중...**")
 
@@ -410,6 +581,10 @@ def main():
                         # 실제 오디오 재생 시간만큼 대기
                         time.sleep(audio_duration)
 
+                    audio_visualizer_placeholder.markdown(
+                        render_audio_visualizer(is_playing=False),
+                        unsafe_allow_html=True
+                    )
                     progress_placeholder.success(f"✓ {repeat_count}번 반복 완료!")
 
             # 쉐도잉 모드인 경우
@@ -423,11 +598,30 @@ def main():
                     for idx in range(start_idx, len(df)):
                         row = df.iloc[idx]
 
-                        # 화면 최상단 업데이트
+                        # 화면 업데이트
                         current_sentence_display.markdown(
                             render_sentence_card(row['English'], row['Korean']),
                             unsafe_allow_html=True
                         )
+                        audio_visualizer_placeholder.markdown(
+                            render_audio_visualizer(is_playing=True),
+                            unsafe_allow_html=True
+                        )
+                        
+                        # 진행 정보 업데이트
+                        progress_percentage = ((idx + 1) / len(df)) * 100
+                        progress_html = f"""
+                        <div class="progress-container">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: white; font-weight: 600;">
+                                <span>문장 {idx + 1} / {len(df)}</span>
+                                <span>{progress_percentage:.1f}%</span>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div style="background: linear-gradient(90deg, #00d4ff 0%, #5b86e5 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease;"></div>
+                            </div>
+                        </div>
+                        """
+                        progress_info_placeholder.markdown(progress_html, unsafe_allow_html=True)
 
                         # 재생
                         progress_placeholder.info(f"🔊 **{idx + 1}/{len(df)} 문장 재생 중...**")
@@ -445,6 +639,10 @@ def main():
                         time.sleep(audio_duration)
 
                         # 쉐도잉 시간
+                        audio_visualizer_placeholder.markdown(
+                            render_audio_visualizer(is_playing=False),
+                            unsafe_allow_html=True
+                        )
                         progress_placeholder.info(f"🎤 **따라 말하세요... ({st.session_state.shadowing_delay}초)**")
                         time.sleep(st.session_state.shadowing_delay)
 
@@ -461,6 +659,10 @@ def main():
 
                 # 수동 재생 (현재 문장만)
                 else:
+                    audio_visualizer_placeholder.markdown(
+                        render_audio_visualizer(is_playing=True),
+                        unsafe_allow_html=True
+                    )
                     progress_placeholder.info("🔊 **재생 중...**")
                     with audio_container:
                         audio_placeholder = st.empty()
@@ -475,6 +677,10 @@ def main():
                     # 실제 오디오 재생 시간만큼 대기
                     time.sleep(audio_duration)
 
+                    audio_visualizer_placeholder.markdown(
+                        render_audio_visualizer(is_playing=False),
+                        unsafe_allow_html=True
+                    )
                     progress_placeholder.info(f"🎤 **따라 말하세요... ({st.session_state.shadowing_delay}초)**")
                     time.sleep(st.session_state.shadowing_delay)
 
@@ -491,11 +697,30 @@ def main():
                     for idx in range(start_idx, len(df)):
                         row = df.iloc[idx]
 
-                        # 화면 최상단 업데이트
+                        # 화면 업데이트
                         current_sentence_display.markdown(
                             render_sentence_card(row['English'], row['Korean']),
                             unsafe_allow_html=True
                         )
+                        audio_visualizer_placeholder.markdown(
+                            render_audio_visualizer(is_playing=True),
+                            unsafe_allow_html=True
+                        )
+                        
+                        # 진행 정보 업데이트
+                        progress_percentage = ((idx + 1) / len(df)) * 100
+                        progress_html = f"""
+                        <div class="progress-container">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: white; font-weight: 600;">
+                                <span>문장 {idx + 1} / {len(df)}</span>
+                                <span>{progress_percentage:.1f}%</span>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div style="background: linear-gradient(90deg, #00d4ff 0%, #5b86e5 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease;"></div>
+                            </div>
+                        </div>
+                        """
+                        progress_info_placeholder.markdown(progress_html, unsafe_allow_html=True)
 
                         # 재생
                         progress_placeholder.info(f"🔊 **{idx + 1}/{len(df)} 문장 재생 중...**")
@@ -521,10 +746,18 @@ def main():
 
                     # 다음 문장으로 이동
                     st.session_state.current_index = (st.session_state.current_index + 1) % len(df)
+                    audio_visualizer_placeholder.markdown(
+                        render_audio_visualizer(is_playing=False),
+                        unsafe_allow_html=True
+                    )
                     progress_placeholder.success("✓ 자동 재생 완료!")
 
                 # 수동 재생 (현재 문장만)
                 else:
+                    audio_visualizer_placeholder.markdown(
+                        render_audio_visualizer(is_playing=True),
+                        unsafe_allow_html=True
+                    )
                     progress_placeholder.info("🔊 **재생 중...**")
                     with audio_container:
                         audio_placeholder = st.empty()
@@ -539,10 +772,19 @@ def main():
                     # 실제 오디오 재생 시간만큼 대기
                     time.sleep(audio_duration)
 
+                    audio_visualizer_placeholder.markdown(
+                        render_audio_visualizer(is_playing=False),
+                        unsafe_allow_html=True
+                    )
                     progress_placeholder.success("✓ 재생 완료!")
 
-    with col3:
-        if st.button("다음 ⏭", use_container_width=True):
+    with col4:
+        if st.button("⏩", use_container_width=True, help="마지막으로"):
+            st.session_state.current_index = len(df) - 1
+            st.rerun()
+
+    with col5:
+        if st.button("⏭", use_container_width=True, help="다음 문장"):
             # 다음 문장으로 이동
             st.session_state.current_index = (st.session_state.current_index + 1) % len(df)
 
