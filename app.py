@@ -48,7 +48,7 @@ def main():
         border-radius: 0;
         padding: 0;
         margin: 20px auto;
-        max-width: 500px;
+        max-width: 600px;
         box-shadow: 0 4px 8px rgba(0,0,0,0.8);
         font-family: 'Tahoma', 'Arial', sans-serif;
     }
@@ -75,7 +75,7 @@ def main():
         background: #000000;
         border: 2px inset #1a2a3a;
         margin: 8px;
-        padding: 8px;
+        padding: 12px;
         min-height: 60px;
     }
 
@@ -120,6 +120,57 @@ def main():
     @keyframes vizPulse {
         0%, 100% { transform: scaleY(0.3); opacity: 0.6; }
         50% { transform: scaleY(1); opacity: 1; }
+    }
+
+    /* Winamp 컨트롤 패널 */
+    .winamp-controls {
+        background: linear-gradient(180deg, #2a4a6a 0%, #1a2a3a 100%);
+        padding: 12px 20px;
+        border-top: 1px solid #4a6a8a;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .winamp-btn {
+        background: linear-gradient(180deg, #4a6a8a 0%, #2a4a6a 100%);
+        border: 2px outset #5a7a9a;
+        border-radius: 3px;
+        color: #ffffff;
+        font-family: 'Tahoma', sans-serif;
+        font-size: 18px;
+        font-weight: bold;
+        width: 50px;
+        height: 40px;
+        cursor: pointer;
+        text-shadow: 1px 1px 0px rgba(0,0,0,0.5);
+        transition: all 0.05s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .winamp-btn:hover {
+        background: linear-gradient(180deg, #5a7a9a 0%, #3a5a7a 100%);
+        border-color: #6a8aaa;
+    }
+
+    .winamp-btn:active {
+        border-style: inset;
+        background: linear-gradient(180deg, #3a5a7a 0%, #2a4a6a 100%);
+    }
+
+    .winamp-btn-play {
+        background: linear-gradient(180deg, #00aa00 0%, #008800 100%);
+        border-color: #00cc00;
+        width: 60px;
+        height: 50px;
+        font-size: 24px;
+    }
+
+    .winamp-btn-play:hover {
+        background: linear-gradient(180deg, #00cc00 0%, #00aa00 100%);
     }
 
     /* Winamp 플레이리스트 */
@@ -177,8 +228,57 @@ def main():
         float: right;
     }
 
-    /* 버튼 스타일 */
-    .stButton > button {
+    /* 버튼 스타일 - Winamp 컨트롤용 */
+    .winamp-controls-container .stButton > button {
+        background: linear-gradient(180deg, #4a6a8a 0%, #2a4a6a 100%) !important;
+        border: 2px outset #5a7a9a !important;
+        border-radius: 3px !important;
+        color: #ffffff !important;
+        font-family: 'Tahoma', 'Arial', sans-serif !important;
+        font-size: 20px !important;
+        font-weight: bold !important;
+        text-shadow: 1px 1px 0px rgba(0,0,0,0.5) !important;
+        padding: 8px 16px !important;
+        min-width: 60px !important;
+        height: 50px !important;
+        transition: all 0.05s !important;
+    }
+
+    .winamp-controls-container .stButton > button:hover {
+        background: linear-gradient(180deg, #5a7a9a 0%, #3a5a7a 100%) !important;
+        border: 2px outset #6a8aaa !important;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.5) !important;
+    }
+
+    .winamp-controls-container .stButton > button:active {
+        border: 2px inset #3a5a7a !important;
+        background: linear-gradient(180deg, #3a5a7a 0%, #2a4a6a 100%) !important;
+        transform: translateY(1px);
+        box-shadow: none !important;
+    }
+
+    /* 재생 버튼 특별 스타일 */
+    .winamp-controls-container div[data-testid="column"]:nth-child(3) .stButton > button {
+        background: linear-gradient(180deg, #00aa00 0%, #008800 100%) !important;
+        border: 2px outset #00cc00 !important;
+        min-width: 80px !important;
+        height: 60px !important;
+        font-size: 28px !important;
+    }
+
+    .winamp-controls-container div[data-testid="column"]:nth-child(3) .stButton > button:hover {
+        background: linear-gradient(180deg, #00cc00 0%, #00aa00 100%) !important;
+        border: 2px outset #00ff00 !important;
+    }
+
+    .winamp-controls-container div[data-testid="column"]:nth-child(3) .stButton > button:active {
+        background: linear-gradient(180deg, #008800 0%, #006600 100%) !important;
+        border: 2px inset #00aa00 !important;
+    }
+
+    /* 사이드바 버튼 스타일 */
+    [data-testid="stSidebar"] .stButton > button {
         background: linear-gradient(180deg, #4a6a8a 0%, #2a4a6a 100%) !important;
         border: 2px outset #5a7a9a !important;
         border-radius: 3px !important;
@@ -188,15 +288,13 @@ def main():
         font-weight: bold !important;
         text-shadow: 1px 1px 0px rgba(0,0,0,0.5) !important;
         padding: 6px 12px !important;
-        transition: all 0.1s !important;
     }
 
-    .stButton > button:hover {
+    [data-testid="stSidebar"] .stButton > button:hover {
         background: linear-gradient(180deg, #5a7a9a 0%, #3a5a7a 100%) !important;
-        border: 2px outset #6a8aaa !important;
     }
 
-    .stButton > button:active {
+    [data-testid="stSidebar"] .stButton > button:active {
         border: 2px inset #3a5a7a !important;
     }
 
@@ -234,50 +332,18 @@ def main():
         background: linear-gradient(180deg, #5a7a9a 0%, #3a5a7a 100%);
     }
 
-    /* MediaElement.js 플레이어 커스터마이징 */
-    .mejs__container {
-        background: #000000 !important;
-        border: 2px inset #1a2a3a !important;
-        margin: 8px !important;
+    /* Winamp 컨트롤 컨테이너 배경 */
+    .winamp-controls-container {
+        background: linear-gradient(180deg, #2a4a6a 0%, #1a2a3a 100%);
+        padding: 15px 20px;
+        border-radius: 5px;
+        margin: 10px auto;
+        max-width: 600px;
     }
 
-    .mejs__controls {
-        background: linear-gradient(180deg, #2a4a6a 0%, #1a2a3a 100%) !important;
-        padding: 8px !important;
-    }
-
-    .mejs__button > button {
-        color: #00ff00 !important;
-    }
-
-    .mejs__time {
-        color: #00ff00 !important;
-        font-family: 'Courier New', monospace !important;
-        font-weight: bold !important;
-        text-shadow: 0 0 4px rgba(0, 255, 0, 0.6) !important;
-    }
-
-    .mejs__time-rail {
-        background: #0a0a0a !important;
-        border: 1px solid #1a2a3a !important;
-    }
-
-    .mejs__time-loaded {
-        background: #1a3a2a !important;
-    }
-
-    .mejs__time-current {
-        background: #00ff00 !important;
-        box-shadow: 0 0 4px rgba(0, 255, 0, 0.6) !important;
-    }
-
-    .mejs__horizontal-volume-slider {
-        background: #0a0a0a !important;
-        border: 1px solid #1a2a3a !important;
-    }
-
-    .mejs__horizontal-volume-current {
-        background: #00ff00 !important;
+    /* 컬럼 간격 조정 */
+    .winamp-controls-container div[data-testid="column"] {
+        padding: 0 5px !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -414,7 +480,7 @@ def main():
 
     current_sentence = df.iloc[current_idx]
 
-    # Winamp 플레이어 - 간단한 버전
+    # Winamp 플레이어
     st.markdown('<div class="winamp-player">', unsafe_allow_html=True)
 
     # 헤더
@@ -431,16 +497,20 @@ def main():
     viz_bars += ''.join([f'<div class="viz-bar" style="height: {(20-i)*3}px; animation-delay: {(20+i)*0.05}s;"></div>' for i in range(1, 21)])
     st.markdown(f'<div class="visualizer">{viz_bars}</div>', unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Winamp 컨트롤 패널 시작
+    st.markdown('<div class="winamp-controls">', unsafe_allow_html=True)
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
     # MediaElement.js 플레이어
     audio_placeholder = st.empty()
 
-    # 컨트롤 버튼
-    col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
+    # Winamp 스타일 버튼 컨테이너
+    st.markdown('<div class="winamp-controls-container">', unsafe_allow_html=True)
+
+    col1, col2, col3, col4, col5 = st.columns([1, 1, 1.5, 1, 1])
 
     with col1:
-        if st.button("⏮ PREV", use_container_width=True):
+        if st.button("⏮", use_container_width=True, help="이전 문장"):
             if st.session_state.current_index > 0:
                 st.session_state.current_index -= 1
             else:
@@ -448,12 +518,12 @@ def main():
             st.rerun()
 
     with col2:
-        if st.button("⏪ FIRST", use_container_width=True):
+        if st.button("⏪", use_container_width=True, help="처음으로"):
             st.session_state.current_index = 0
             st.rerun()
 
     with col3:
-        if st.button("▶️ PLAY", use_container_width=True, type="primary"):
+        if st.button("▶️", use_container_width=True, help="재생", type="primary"):
             play_audio_with_stats_v2(
                 current_sentence['English'],
                 current_idx,
@@ -462,14 +532,16 @@ def main():
             )
 
     with col4:
-        if st.button("⏩ LAST", use_container_width=True):
+        if st.button("⏩", use_container_width=True, help="마지막으로"):
             st.session_state.current_index = len(df) - 1
             st.rerun()
 
     with col5:
-        if st.button("⏭ NEXT", use_container_width=True):
+        if st.button("⏭", use_container_width=True, help="다음 문장"):
             st.session_state.current_index = (st.session_state.current_index + 1) % len(df)
             st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.divider()
 
