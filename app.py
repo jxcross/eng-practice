@@ -48,7 +48,7 @@ def main():
         border-radius: 0;
         padding: 0;
         margin: 20px auto;
-        max-width: 600px;
+        max-width: 900px;
         box-shadow: 0 4px 8px rgba(0,0,0,0.8);
         font-family: 'Tahoma', 'Arial', sans-serif;
     }
@@ -75,8 +75,8 @@ def main():
         background: #000000;
         border: 2px inset #1a2a3a;
         margin: 8px;
-        padding: 12px;
-        min-height: 60px;
+        padding: 20px 15px;
+        min-height: 100px;
     }
 
     .winamp-time {
@@ -91,8 +91,17 @@ def main():
     .winamp-text {
         color: #00ff00;
         font-family: 'Courier New', monospace;
-        font-size: 14px;
+        font-size: 28px;
         text-shadow: 0 0 4px rgba(0, 255, 0, 0.6);
+        margin-top: 12px;
+        font-weight: bold;
+    }
+
+    .winamp-text-korean {
+        color: #00aaff;
+        font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+        font-size: 18px;
+        text-shadow: 0 0 4px rgba(0, 170, 255, 0.6);
         margin-top: 8px;
     }
 
@@ -101,8 +110,8 @@ def main():
         background: #000000;
         border: 2px inset #1a2a3a;
         margin: 0 8px 8px 8px;
-        padding: 8px;
-        height: 60px;
+        padding: 12px 8px;
+        height: 80px;
         display: flex;
         align-items: flex-end;
         justify-content: center;
@@ -338,7 +347,9 @@ def main():
         padding: 15px 20px;
         border-radius: 5px;
         margin: 10px auto;
-        max-width: 600px;
+        max-width: 700px;
+        border: 2px outset #4a6a8a;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.5);
     }
 
     /* 컬럼 간격 조정 */
@@ -488,13 +499,24 @@ def main():
 
     # 디스플레이
     st.markdown('<div class="winamp-display">', unsafe_allow_html=True)
-    st.markdown('<div class="winamp-time">00:00</div>', unsafe_allow_html=True)
+
+    # 현재 문장의 오디오 길이 표시
+    if current_idx in st.session_state.audio_durations:
+        duration_sec = int(st.session_state.audio_durations[current_idx])
+        time_display = f"{duration_sec // 60:02d}:{duration_sec % 60:02d}"
+    else:
+        time_display = "00:00"
+
+    st.markdown(f'<div class="winamp-time">{time_display}</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="winamp-text">{current_sentence["English"]}</div>', unsafe_allow_html=True)
+    if current_sentence['Korean']:
+        st.markdown(f'<div class="winamp-text-korean">{current_sentence["Korean"]}</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 비주얼라이저
-    viz_bars = ''.join([f'<div class="viz-bar" style="height: {i*3}px; animation-delay: {i*0.05}s;"></div>' for i in range(1, 21)])
-    viz_bars += ''.join([f'<div class="viz-bar" style="height: {(20-i)*3}px; animation-delay: {(20+i)*0.05}s;"></div>' for i in range(1, 21)])
+    # 비주얼라이저 - 랜덤 높이로 동적 변화
+    import random
+    heights = [random.randint(10, 70) for _ in range(40)]
+    viz_bars = ''.join([f'<div class="viz-bar" style="height: {h}px; animation-delay: {i*0.05}s;"></div>' for i, h in enumerate(heights)])
     st.markdown(f'<div class="visualizer">{viz_bars}</div>', unsafe_allow_html=True)
 
     # Winamp 컨트롤 패널 시작
@@ -554,9 +576,12 @@ def main():
         is_current = idx == st.session_state.current_index
         item_class = "playlist-item-current" if is_current else "playlist-item"
 
-        # 시간 계산
-        total_sec = idx * 5
-        timestamp = f"{total_sec // 60:02d}:{total_sec % 60:02d}"
+        # 실제 오디오 길이로 시간 계산
+        if idx in st.session_state.audio_durations:
+            duration_sec = int(st.session_state.audio_durations[idx])
+            timestamp = f"{duration_sec // 60:02d}:{duration_sec % 60:02d}"
+        else:
+            timestamp = "00:00"
 
         sentence_html = f'<div class="{item_class}">{idx + 1}. {row["English"]}<span class="playlist-time">{timestamp}</span></div>'
         st.markdown(sentence_html, unsafe_allow_html=True)
