@@ -245,71 +245,235 @@ def main():
             st.rerun()
 
     # ========== 메인 영역 ==========
-    # 미디어 플레이어 스타일 CSS
+    # Winamp 스타일 CSS
     st.markdown("""
     <style>
+    /* Winamp 메인 컨테이너 */
     .media-player-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 20px;
-        padding: 30px;
+        background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+        border: 2px solid #4a4a4a;
+        border-radius: 8px;
+        padding: 15px;
         margin: 20px 0;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 4px 8px rgba(0,0,0,0.5);
+        font-family: 'Courier New', monospace;
     }
+    
+    /* Winamp 스타일 오디오 비주얼라이저 */
     .audio-visualizer {
-        background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-        border-radius: 15px;
-        padding: 40px 20px;
-        margin: 20px 0;
-        min-height: 200px;
+        background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+        border: 2px solid #4a4a4a;
+        border-radius: 4px;
+        padding: 20px;
+        margin: 15px 0;
+        min-height: 150px;
         display: flex;
         align-items: center;
         justify-content: center;
         position: relative;
         overflow: hidden;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
     }
+    
     .waveform-bars {
         display: flex;
-        align-items: center;
+        align-items: flex-end;
         justify-content: center;
-        gap: 4px;
-        height: 120px;
+        gap: 3px;
+        height: 100px;
     }
+    
     .waveform-bar {
-        width: 6px;
-        background: linear-gradient(180deg, #00d4ff 0%, #5b86e5 100%);
-        border-radius: 3px;
-        animation: wave 1.5s ease-in-out infinite;
+        width: 5px;
+        background: linear-gradient(180deg, #00FF41 0%, #00FF00 50%, #00A8FF 100%);
+        border: 1px solid #00FF41;
+        border-radius: 2px;
+        animation: winampWave 0.8s ease-in-out infinite;
+        box-shadow: 0 0 4px rgba(0, 255, 65, 0.6);
     }
-    @keyframes wave {
-        0%, 100% { transform: scaleY(0.3); opacity: 0.7; }
+    
+    @keyframes winampWave {
+        0%, 100% { transform: scaleY(0.2); opacity: 0.6; }
         50% { transform: scaleY(1); opacity: 1; }
     }
+    
+    /* Winamp 스타일 문장 디스플레이 */
     .sentence-display {
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 15px;
-        padding: 30px;
+        background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+        border: 2px solid #4a4a4a;
+        border-radius: 4px;
+        padding: 25px;
         margin: 20px 0;
         text-align: center;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.5);
     }
+    
+    .sentence-display h2 {
+        color: #00FF41 !important;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        text-shadow: 0 0 8px rgba(0, 255, 65, 0.8), 0 0 4px rgba(0, 255, 65, 0.6);
+        font-size: 28px;
+        margin-bottom: 15px;
+    }
+    
+    .sentence-display p {
+        color: #00A8FF !important;
+        font-family: 'Courier New', monospace;
+        font-size: 18px;
+        text-shadow: 0 0 4px rgba(0, 168, 255, 0.6);
+    }
+    
+    /* Winamp 스타일 진행 바 */
     .progress-container {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 15px;
+        background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+        border: 2px solid #4a4a4a;
+        border-radius: 4px;
+        padding: 12px;
         margin: 15px 0;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
     }
-    .control-buttons {
-        display: flex;
-        justify-content: center;
-        gap: 15px;
-        margin: 20px 0;
+    
+    .progress-container > div:first-child {
+        color: #00FF41 !important;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        text-shadow: 0 0 4px rgba(0, 255, 65, 0.8);
     }
+    
+    .progress-container > div:last-child {
+        background: #1a1a1a !important;
+        border: 1px solid #4a4a4a;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+    }
+    
+    .progress-container > div:last-child > div {
+        background: linear-gradient(90deg, #00FF41 0%, #00A8FF 100%) !important;
+        box-shadow: 0 0 8px rgba(0, 255, 65, 0.6);
+    }
+    
+    /* Winamp 스타일 통계 카드 */
     .stat-card {
-        background: rgba(255, 255, 255, 0.15);
-        border-radius: 10px;
-        padding: 15px;
+        background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+        border: 2px solid #4a4a4a;
+        border-radius: 4px;
+        padding: 12px;
         text-align: center;
-        backdrop-filter: blur(10px);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.5);
+    }
+    
+    .stat-card > div:first-child {
+        color: #00FF41 !important;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        text-shadow: 0 0 6px rgba(0, 255, 65, 0.8);
+    }
+    
+    .stat-card > div:last-child {
+        color: #00A8FF !important;
+        font-family: 'Courier New', monospace;
+        text-shadow: 0 0 4px rgba(0, 168, 255, 0.6);
+    }
+    
+    /* Winamp 스타일 버튼 */
+    .stButton > button {
+        background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%) !important;
+        border: 2px solid #4a4a4a !important;
+        border-radius: 4px !important;
+        color: #00FF41 !important;
+        font-family: 'Courier New', monospace !important;
+        font-weight: bold !important;
+        text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.5) !important;
+        transition: all 0.2s !important;
+    }
+    
+    .stButton > button:hover {
+        background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%) !important;
+        border-color: #00FF41 !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 0 8px rgba(0, 255, 65, 0.4) !important;
+    }
+    
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(180deg, #00A8FF 0%, #0088CC 100%) !important;
+        border-color: #00FF41 !important;
+        color: #000000 !important;
+        text-shadow: none !important;
+    }
+    
+    /* MediaElement.js Winamp 스타일 */
+    .mejs__container {
+        background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
+        border: 2px solid #4a4a4a !important;
+        border-radius: 4px !important;
+        padding: 8px !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.5) !important;
+    }
+    
+    .mejs__controls {
+        background: transparent !important;
+    }
+    
+    .mejs__button > button {
+        color: #00FF41 !important;
+        text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
+    }
+    
+    .mejs__time {
+        color: #00FF41 !important;
+        font-family: 'Courier New', monospace !important;
+        font-weight: bold !important;
+        text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
+    }
+    
+    .mejs__time-rail {
+        background: #1a1a1a !important;
+        border: 1px solid #4a4a4a !important;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.8) !important;
+    }
+    
+    .mejs__time-loaded {
+        background: #2a2a2a !important;
+    }
+    
+    .mejs__time-current {
+        background: linear-gradient(90deg, #00FF41 0%, #00A8FF 100%) !important;
+        box-shadow: 0 0 6px rgba(0, 255, 65, 0.6) !important;
+    }
+    
+    .mejs__volume-button > button {
+        color: #00FF41 !important;
+        text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
+    }
+    
+    .mejs__horizontal-volume-slider {
+        background: #1a1a1a !important;
+        border: 1px solid #4a4a4a !important;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.8) !important;
+    }
+    
+    .mejs__horizontal-volume-current {
+        background: linear-gradient(90deg, #00FF41 0%, #00A8FF 100%) !important;
+        box-shadow: 0 0 4px rgba(0, 255, 65, 0.6) !important;
+    }
+    
+    /* Winamp 스타일 체크박스 */
+    .stCheckbox > label {
+        color: #00FF41 !important;
+        font-family: 'Courier New', monospace !important;
+        text-shadow: 0 0 4px rgba(0, 255, 65, 0.6) !important;
+    }
+    
+    /* 전체 배경 */
+    .stApp {
+        background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%) !important;
+    }
+    
+    /* 제목 스타일 */
+    h1, h2, h3 {
+        color: #00FF41 !important;
+        font-family: 'Courier New', monospace !important;
+        text-shadow: 0 0 8px rgba(0, 255, 65, 0.8) !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -404,16 +568,16 @@ def main():
         unsafe_allow_html=True
     )
 
-    # 진행 정보 표시
+    # 진행 정보 표시 (Winamp 스타일)
     progress_percentage = ((current_idx + 1) / len(df)) * 100
     progress_html = f"""
     <div class="progress-container">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: white; font-weight: 600;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #00FF41; font-weight: bold; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 255, 65, 0.8);">
             <span>문장 {current_idx + 1} / {len(df)}</span>
             <span>{progress_percentage:.1f}%</span>
         </div>
-        <div style="background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; overflow: hidden;">
-            <div style="background: linear-gradient(90deg, #00d4ff 0%, #5b86e5 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease;"></div>
+        <div style="background: #1a1a1a; height: 10px; border: 1px solid #4a4a4a; border-radius: 2px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);">
+            <div style="background: linear-gradient(90deg, #00FF41 0%, #00A8FF 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease; box-shadow: 0 0 6px rgba(0, 255, 65, 0.6);"></div>
         </div>
     </div>
     """
@@ -425,8 +589,8 @@ def main():
     with col1:
         st.markdown(f"""
         <div class="stat-card">
-            <div style="font-size: 24px; font-weight: bold; color: #00d4ff;">{sentence_stats['listen_count']}</div>
-            <div style="font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 5px;">재생 횟수</div>
+            <div style="font-size: 24px; font-weight: bold; color: #00FF41; font-family: 'Courier New', monospace; text-shadow: 0 0 6px rgba(0, 255, 65, 0.8);">{sentence_stats['listen_count']}</div>
+            <div style="font-size: 12px; color: #00A8FF; margin-top: 5px; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 168, 255, 0.6);">재생 횟수</div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -434,8 +598,8 @@ def main():
         mastered_count = len(st.session_state.mastered_sentences)
         st.markdown(f"""
         <div class="stat-card">
-            <div style="font-size: 24px; font-weight: bold; color: #4caf50;">{mastered_count}</div>
-            <div style="font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 5px;">마스터 완료</div>
+            <div style="font-size: 24px; font-weight: bold; color: #00FF41; font-family: 'Courier New', monospace; text-shadow: 0 0 6px rgba(0, 255, 65, 0.8);">{mastered_count}</div>
+            <div style="font-size: 12px; color: #00A8FF; margin-top: 5px; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 168, 255, 0.6);">마스터 완료</div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -443,8 +607,8 @@ def main():
         total_practiced = len(st.session_state.practice_stats)
         st.markdown(f"""
         <div class="stat-card">
-            <div style="font-size: 24px; font-weight: bold; color: #ff9800;">{total_practiced}</div>
-            <div style="font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 5px;">연습한 문장</div>
+            <div style="font-size: 24px; font-weight: bold; color: #00FF41; font-family: 'Courier New', monospace; text-shadow: 0 0 6px rgba(0, 255, 65, 0.8);">{total_practiced}</div>
+            <div style="font-size: 12px; color: #00A8FF; margin-top: 5px; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 168, 255, 0.6);">연습한 문장</div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -452,8 +616,8 @@ def main():
         mode_icon = "🔁" if st.session_state.repeat_mode == "전체 루프" else "🔂" if st.session_state.repeat_mode == "개별 반복" else "🎤"
         st.markdown(f"""
         <div class="stat-card">
-            <div style="font-size: 24px; font-weight: bold; color: #e91e63;">{mode_icon}</div>
-            <div style="font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 5px;">{st.session_state.repeat_mode}</div>
+            <div style="font-size: 24px; font-weight: bold; color: #00FF41; font-family: 'Courier New', monospace; text-shadow: 0 0 6px rgba(0, 255, 65, 0.8);">{mode_icon}</div>
+            <div style="font-size: 12px; color: #00A8FF; margin-top: 5px; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 168, 255, 0.6);">{st.session_state.repeat_mode}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -516,12 +680,12 @@ def main():
                         progress_percentage = ((idx + 1) / len(df)) * 100
                         progress_html = f"""
                         <div class="progress-container">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: white; font-weight: 600;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #00FF41; font-weight: bold; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 255, 65, 0.8);">
                                 <span>문장 {idx + 1} / {len(df)}</span>
                                 <span>{progress_percentage:.1f}%</span>
                             </div>
-                            <div style="background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div style="background: linear-gradient(90deg, #00d4ff 0%, #5b86e5 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease;"></div>
+                            <div style="background: #1a1a1a; height: 10px; border: 1px solid #4a4a4a; border-radius: 2px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);">
+                                <div style="background: linear-gradient(90deg, #00FF41 0%, #00A8FF 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease; box-shadow: 0 0 6px rgba(0, 255, 65, 0.6);"></div>
                             </div>
                         </div>
                         """
@@ -612,12 +776,12 @@ def main():
                         progress_percentage = ((idx + 1) / len(df)) * 100
                         progress_html = f"""
                         <div class="progress-container">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: white; font-weight: 600;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #00FF41; font-weight: bold; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 255, 65, 0.8);">
                                 <span>문장 {idx + 1} / {len(df)}</span>
                                 <span>{progress_percentage:.1f}%</span>
                             </div>
-                            <div style="background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div style="background: linear-gradient(90deg, #00d4ff 0%, #5b86e5 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease;"></div>
+                            <div style="background: #1a1a1a; height: 10px; border: 1px solid #4a4a4a; border-radius: 2px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);">
+                                <div style="background: linear-gradient(90deg, #00FF41 0%, #00A8FF 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease; box-shadow: 0 0 6px rgba(0, 255, 65, 0.6);"></div>
                             </div>
                         </div>
                         """
@@ -711,12 +875,12 @@ def main():
                         progress_percentage = ((idx + 1) / len(df)) * 100
                         progress_html = f"""
                         <div class="progress-container">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: white; font-weight: 600;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #00FF41; font-weight: bold; font-family: 'Courier New', monospace; text-shadow: 0 0 4px rgba(0, 255, 65, 0.8);">
                                 <span>문장 {idx + 1} / {len(df)}</span>
                                 <span>{progress_percentage:.1f}%</span>
                             </div>
-                            <div style="background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div style="background: linear-gradient(90deg, #00d4ff 0%, #5b86e5 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease;"></div>
+                            <div style="background: #1a1a1a; height: 10px; border: 1px solid #4a4a4a; border-radius: 2px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);">
+                                <div style="background: linear-gradient(90deg, #00FF41 0%, #00A8FF 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s ease; box-shadow: 0 0 6px rgba(0, 255, 65, 0.6);"></div>
                             </div>
                         </div>
                         """

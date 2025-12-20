@@ -328,7 +328,7 @@ def play_audio_with_stats(text: str, index: int, speed: float = 1.0, autoplay: b
             audio_bytes, duration = generate_audio(text, speed)
 
         if autoplay:
-            # 자동 재생되는 숨겨진 오디오 플레이어
+            # 간단하고 확실한 HTML5 오디오 플레이어 사용
             import base64
             import time as time_module
             import random
@@ -338,17 +338,59 @@ def play_audio_with_stats(text: str, index: int, speed: float = 1.0, autoplay: b
             unique_id = f"audio_{int(time_module.time() * 1000)}_{random.randint(1000, 9999)}"
 
             audio_html = f"""
-                <audio id="{unique_id}" autoplay="true" style="display:none;">
+                <audio id="{unique_id}" autoplay style="display: none;">
                     <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
                 </audio>
                 <script>
                     (function() {{
+                        // 이전 오디오들 정지
+                        if (window.currentAudioElement) {{
+                            try {{
+                                window.currentAudioElement.pause();
+                                window.currentAudioElement.currentTime = 0;
+                            }} catch(e) {{
+                                console.log('Error stopping previous audio:', e);
+                            }}
+                        }}
+
+                        // 새 오디오 엘리먼트 가져오기
                         var audio = document.getElementById('{unique_id}');
                         if (audio) {{
-                            audio.playbackRate = {speed};  // 브라우저 네이티브 속도 조절
+                            // 재생 속도 설정
+                            audio.playbackRate = {speed};
+
+                            // 현재 재생 중인 오디오로 설정
+                            window.currentAudioElement = audio;
+
+                            // 자동 재생
+                            var playPromise = audio.play();
+                            if (playPromise !== undefined) {{
+                                playPromise.then(function() {{
+                                    console.log('Audio playback started successfully');
+                                }}).catch(function(error) {{
+                                    console.error('Audio play failed:', error);
+                                    // 재시도
+                                    setTimeout(function() {{
+                                        audio.play().catch(function(err) {{
+                                            console.error('Audio play retry failed:', err);
+                                        }});
+                                    }}, 100);
+                                }});
+                            }}
+
+                            // 재생 종료 시 정리
                             audio.addEventListener('ended', function() {{
-                                this.remove();
+                                if (window.currentAudioElement === audio) {{
+                                    window.currentAudioElement = null;
+                                }}
                             }});
+
+                            // 에러 처리
+                            audio.addEventListener('error', function(e) {{
+                                console.error('Audio error:', e);
+                            }});
+                        }} else {{
+                            console.error('Audio element not found');
                         }}
                     }})();
                 </script>
@@ -396,57 +438,101 @@ def apply_custom_css(dark_mode: bool = False):
     if dark_mode:
         css = """
         <style>
+        /* Winamp 스타일 다크 모드 - 기본적으로 Winamp 스타일이므로 동일하게 유지 */
         .stApp {
-            background-color: #1E1E1E;
-            color: #E0E0E0;
+            background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%) !important;
+            color: #00FF41 !important;
         }
         .stMarkdown, .stText {
-            color: #E0E0E0;
+            color: #00A8FF !important;
+            font-family: 'Courier New', monospace !important;
         }
         h1, h2, h3, h4, h5, h6 {
-            color: #FFFFFF !important;
+            color: #00FF41 !important;
+            font-family: 'Courier New', monospace !important;
+            text-shadow: 0 0 8px rgba(0, 255, 65, 0.8) !important;
         }
 
-        /* Dark mode for sentence card */
+        /* Winamp 스타일 문장 카드 */
         div[style*="background-color: #f8f9fa"] {
-            background-color: #2a2a2a !important;
-            border-color: #404040 !important;
+            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
+            border: 2px solid #4a4a4a !important;
         }
         
-        /* Dark mode for media player */
         .sentence-display {
-            background: rgba(42, 42, 42, 0.95) !important;
+            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
+            border: 2px solid #4a4a4a !important;
         }
         .sentence-display h2 {
-            color: #E0E0E0 !important;
+            color: #00FF41 !important;
+            text-shadow: 0 0 8px rgba(0, 255, 65, 0.8) !important;
         }
         .sentence-display p {
-            color: #999 !important;
+            color: #00A8FF !important;
+            text-shadow: 0 0 4px rgba(0, 168, 255, 0.6) !important;
         }
         .media-player-container {
-            background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%) !important;
+            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
+            border: 2px solid #4a4a4a !important;
         }
         .audio-visualizer {
-            background: linear-gradient(180deg, #0a0a0a 0%, #1a1a2e 100%) !important;
+            background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%) !important;
+            border: 2px solid #4a4a4a !important;
+        }
+        
+        /* Winamp 스타일 MediaElement.js 플레이어 */
+        .mejs__container {
+            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
+            border: 2px solid #4a4a4a !important;
+        }
+        .mejs__button > button {
+            color: #00FF41 !important;
+            text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
+        }
+        .mejs__time {
+            color: #00FF41 !important;
+            font-family: 'Courier New', monospace !important;
+            text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
+        }
+        .mejs__time-rail {
+            background: #1a1a1a !important;
+            border: 1px solid #4a4a4a !important;
+        }
+        .mejs__time-loaded {
+            background: #2a2a2a !important;
+        }
+        .mejs__volume-button > button {
+            color: #00FF41 !important;
+            text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
+        }
+        .mejs__horizontal-volume-slider {
+            background: #1a1a1a !important;
+            border: 1px solid #4a4a4a !important;
         }
 
-        /* Dark mode for transcript list */
+        /* Winamp 스타일 플레이리스트 */
         .transcript-current {
-            background-color: #1e3a5f !important;
+            background: linear-gradient(90deg, #1a3a5a 0%, #2a4a6a 100%) !important;
+            border-left: 3px solid #00FF41 !important;
+            color: #00FF41 !important;
         }
         .transcript-row:hover {
-            background-color: #2a2a2a !important;
+            background: linear-gradient(90deg, #2a2a2a 0%, #3a3a3a 100%) !important;
         }
         .timestamp {
-            color: #aaa !important;
+            color: #00A8FF !important;
+            font-family: 'Courier New', monospace !important;
         }
         .badge {
-            background-color: #404040 !important;
-            color: #ccc !important;
+            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
+            border: 1px solid #4a4a4a !important;
+            color: #00FF41 !important;
+            font-family: 'Courier New', monospace !important;
         }
         .badge-master {
-            background-color: #2e7d32 !important;
-            color: #fff !important;
+            background: linear-gradient(180deg, #00FF41 0%, #00A8FF 100%) !important;
+            color: #000000 !important;
+            font-weight: bold !important;
         }
         </style>
         """
@@ -468,41 +554,53 @@ def display_transcript_list(df: pd.DataFrame):
 
     st.subheader("📝 전체 문장")
 
-    # Transcript styling CSS
+    # Winamp 스타일 플레이리스트 CSS
     st.markdown("""
     <style>
     .transcript-row {
-        padding: 12px;
-        border-bottom: 1px solid #e0e0e0;
+        padding: 8px 12px;
+        border-bottom: 1px solid #4a4a4a;
         cursor: pointer;
-        transition: background-color 0.2s;
+        transition: all 0.2s;
+        background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+        border-left: 2px solid transparent;
     }
     .transcript-row:hover {
-        background-color: #f5f5f5;
+        background: linear-gradient(90deg, #2a2a2a 0%, #3a3a3a 100%) !important;
+        border-left: 2px solid #00FF41;
     }
     .transcript-current {
-        background-color: #e3f2fd;
-        border-left: 4px solid #2196f3;
-        font-weight: 600;
+        background: linear-gradient(90deg, #1a3a5a 0%, #2a4a6a 100%) !important;
+        border-left: 3px solid #00FF41 !important;
+        font-weight: bold !important;
+        color: #00FF41 !important;
+        text-shadow: 0 0 4px rgba(0, 255, 65, 0.8) !important;
     }
     .timestamp {
-        font-family: monospace;
-        color: #888;
-        font-size: 14px;
-        text-align: right;
+        font-family: 'Courier New', monospace !important;
+        color: #00A8FF !important;
+        font-size: 14px !important;
+        text-align: right !important;
+        text-shadow: 0 0 4px rgba(0, 168, 255, 0.6) !important;
     }
     .badge {
         display: inline-block;
         padding: 2px 6px;
-        border-radius: 8px;
+        border-radius: 2px;
         font-size: 11px;
         margin-left: 6px;
-        background-color: #f0f0f0;
-        color: #666;
+        background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+        border: 1px solid #4a4a4a;
+        color: #00FF41;
+        font-family: 'Courier New', monospace;
+        text-shadow: 0 0 4px rgba(0, 255, 65, 0.6);
     }
     .badge-master {
-        background-color: #4caf50;
-        color: white;
+        background: linear-gradient(180deg, #00FF41 0%, #00A8FF 100%) !important;
+        color: #000000 !important;
+        font-weight: bold !important;
+        border: 1px solid #00FF41 !important;
+        text-shadow: none !important;
     }
     </style>
     """, unsafe_allow_html=True)
