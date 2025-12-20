@@ -12,15 +12,12 @@ from utils import (
     load_and_validate_csv,
     parse_text_input,
     get_sentence_stats,
-    calculate_progress,
     generate_audio,
     play_audio_with_stats,
     save_session_to_json,
     load_session_from_json,
     apply_custom_css,
-    display_sentence_list,
-    display_practice_chart,
-    display_session_stats
+    display_transcript_list
 )
 
 
@@ -268,32 +265,7 @@ def main():
 
     df = st.session_state.df
 
-    # ===== 상단: 전체 통계 =====
-    if st.session_state.show_stats:
-        mastered, total, progress = calculate_progress()
-
-        col1, col2, col3, col4 = st.columns(4)
-
-        with col1:
-            st.metric("전체 문장", total)
-
-        with col2:
-            st.metric("마스터한 문장", mastered)
-
-        with col3:
-            st.metric("진행률", f"{progress:.1f}%")
-
-        with col4:
-            st.metric("총 청취 횟수", st.session_state.total_listens)
-
-        # 진행률 바
-        if total > 0:
-            st.progress(progress / 100)
-
-    st.divider()
-
     # ===== 중앙: 현재 문장 표시 =====
-    st.subheader("현재 문장")
 
     current_idx = st.session_state.current_index
     if current_idx >= len(df):
@@ -302,27 +274,47 @@ def main():
 
     current_sentence = df.iloc[current_idx]
 
-    # 현재 문장을 표시할 placeholder 생성 (전체 재생 시 업데이트용)
-    current_sentence_display = st.empty()
-    current_translation_display = st.empty()
-
-    # 현재 문장 큰 글씨로 표시
-    current_sentence_display.markdown(f"### {current_sentence['English']}")
-
-    if st.session_state.show_translation:
-        current_translation_display.markdown(f"*{current_sentence['Korean']}*")
-
     # 이 문장의 통계
     sentence_stats = get_sentence_stats(current_idx)
 
-    col1, col2, col3 = st.columns(3)
+    # 현재 문장을 표시할 placeholder 생성 (전체 재생 시 업데이트용)
+    current_sentence_display = st.empty()
+
+    # 큰 카드 스타일로 문장 표시
+    def render_sentence_card(sentence_text, translation_text=""):
+        """문장 카드를 렌더링하는 헬퍼 함수"""
+        card_html = f"""
+        <div style="
+            background-color: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 40px 24px;
+            margin: 24px 0;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        ">
+            <h2 style='font-size: 32px; margin-bottom: 16px; color: #1a1a1a;'>{sentence_text}</h2>
+        """
+        if translation_text and st.session_state.show_translation:
+            card_html += f"<p style='color: #666; font-size: 18px; font-style: italic; margin-top: 8px;'>{translation_text}</p>"
+        card_html += "</div>"
+        return card_html
+
+    # 초기 문장 표시
+    current_sentence_display.markdown(
+        render_sentence_card(current_sentence['English'], current_sentence['Korean']),
+        unsafe_allow_html=True
+    )
+
+    # 문장 아래 정보 행
+    col1, col2, col3 = st.columns([1, 2, 1])
 
     with col1:
-        st.caption(f"청취 횟수: {sentence_stats['listen_count']}")
+        st.caption(f"🎧 {sentence_stats['listen_count']}회 재생")
 
     with col2:
         is_mastered = current_idx in st.session_state.mastered_sentences
-        if st.checkbox("마스터 완료", value=is_mastered, key=f"master_{current_idx}"):
+        if st.checkbox("✓ 마스터 완료", value=is_mastered, key=f"master_{current_idx}"):
             st.session_state.mastered_sentences.add(current_idx)
         else:
             st.session_state.mastered_sentences.discard(current_idx)
@@ -333,14 +325,9 @@ def main():
     st.divider()
 
     # ===== 컨트롤 버튼들 =====
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("⏮️ 처음으로", use_container_width=True):
-            st.session_state.current_index = 0
-            st.rerun()
-
-    with col2:
         if st.button("◀️ 이전", use_container_width=True):
             if st.session_state.current_index > 0:
                 st.session_state.current_index -= 1
@@ -348,7 +335,7 @@ def main():
                 st.session_state.current_index = len(df) - 1
             st.rerun()
 
-    with col3:
+    with col2:
         if st.button("▶️ 재생", use_container_width=True, type="primary"):
             # 개별 반복 모드인 경우
             if st.session_state.repeat_mode == "개별 반복":
@@ -363,11 +350,10 @@ def main():
                         row = df.iloc[idx]
 
                         # 화면 최상단 업데이트
-                        current_sentence_display.markdown(f"### {row['English']}")
-                        if st.session_state.show_translation and row['Korean']:
-                            current_translation_display.markdown(f"*{row['Korean']}*")
-                        else:
-                            current_translation_display.empty()
+                        current_sentence_display.markdown(
+                            render_sentence_card(row['English'], row['Korean']),
+                            unsafe_allow_html=True
+                        )
 
                         # 각 문장을 반복 횟수만큼 재생
                         for i in range(repeat_count):
@@ -435,11 +421,10 @@ def main():
                         row = df.iloc[idx]
 
                         # 화면 최상단 업데이트
-                        current_sentence_display.markdown(f"### {row['English']}")
-                        if st.session_state.show_translation and row['Korean']:
-                            current_translation_display.markdown(f"*{row['Korean']}*")
-                        else:
-                            current_translation_display.empty()
+                        current_sentence_display.markdown(
+                            render_sentence_card(row['English'], row['Korean']),
+                            unsafe_allow_html=True
+                        )
 
                         # 재생
                         progress_placeholder.info(f"🔊 **{idx + 1}/{len(df)} 문장 재생 중...**")
@@ -504,11 +489,10 @@ def main():
                         row = df.iloc[idx]
 
                         # 화면 최상단 업데이트
-                        current_sentence_display.markdown(f"### {row['English']}")
-                        if st.session_state.show_translation and row['Korean']:
-                            current_translation_display.markdown(f"*{row['Korean']}*")
-                        else:
-                            current_translation_display.empty()
+                        current_sentence_display.markdown(
+                            render_sentence_card(row['English'], row['Korean']),
+                            unsafe_allow_html=True
+                        )
 
                         # 재생
                         progress_placeholder.info(f"🔊 **{idx + 1}/{len(df)} 문장 재생 중...**")
@@ -554,8 +538,8 @@ def main():
 
                     progress_placeholder.success("✓ 재생 완료!")
 
-    with col4:
-        if st.button("다음 ▶️", use_container_width=True):
+    with col3:
+        if st.button("다음 ⏭", use_container_width=True):
             # 다음 문장으로 이동
             st.session_state.current_index = (st.session_state.current_index + 1) % len(df)
 
@@ -568,101 +552,10 @@ def main():
 
             st.rerun()
 
-    with col5:
-        if st.button("전체 재생 ⏯️", use_container_width=True):
-            # 개별 반복 모드인 경우 전체 루프 반복 횟수 적용
-            total_loops = st.session_state.target_repeats if st.session_state.repeat_mode == "개별 반복" else 1
-
-            # 진행 상황 표시용 placeholder
-            play_progress = st.empty()
-            audio_container = st.container()
-
-            # 전체 문장을 total_loops 번 반복
-            for loop_idx in range(total_loops):
-                # 전체 문장 재생
-                for idx, row in df.iterrows():
-                    # 화면 최상단의 현재 문장 표시 영역 업데이트
-                    current_sentence_display.markdown(f"### {row['English']}")
-                    if st.session_state.show_translation and row['Korean']:
-                        current_translation_display.markdown(f"*{row['Korean']}*")
-                    else:
-                        current_translation_display.empty()
-
-                    # 진행 상황 표시
-                    if total_loops > 1:
-                        play_progress.info(f"🔊 **{loop_idx + 1}/{total_loops}회 루프 - {idx + 1}/{len(df)} 문장 재생 중**")
-                    else:
-                        play_progress.info(f"🔊 **{idx + 1}/{len(df)} 문장 재생 중**")
-
-                    # 각 문장마다 새로운 placeholder 사용
-                    with audio_container:
-                        audio_placeholder = st.empty()
-                        play_audio_with_stats(
-                            row['English'],
-                            idx,
-                            st.session_state.playback_speed,
-                            autoplay=True,
-                            audio_placeholder=audio_placeholder
-                        )
-
-                    # 오디오 재생 시간 대기
-                    wait_time = max(1.5, len(row['English'].split()) * 0.5 / st.session_state.playback_speed)
-                    time.sleep(wait_time)
-
-                # 루프 사이 짧은 간격 (마지막 루프가 아닌 경우)
-                if loop_idx < total_loops - 1:
-                    play_progress.info(f"⏳ **{loop_idx + 1}회 루프 완료! 다시 시작합니다...**")
-                    time.sleep(1)
-
-            # 완료 메시지
-            play_progress.success(f"✓ 전체 재생이 완료되었습니다! (총 {total_loops}회 루프)")
-
-            # 원래 문장으로 복원
-            current_sentence_display.markdown(f"### {current_sentence['English']}")
-            if st.session_state.show_translation:
-                current_translation_display.markdown(f"*{current_sentence['Korean']}*")
-            else:
-                current_translation_display.empty()
-
     st.divider()
 
     # ===== 하단: 전체 문장 리스트 =====
-    display_sentence_list(df)
-
-    # ===== 통계 탭 =====
-    if st.session_state.show_stats:
-        st.divider()
-
-        tab1, tab2, tab3 = st.tabs(["📊 연습 통계", "📝 세션 기록", "📈 차트"])
-
-        with tab1:
-            st.subheader("연습 통계")
-
-            if st.session_state.practice_stats:
-                # 통계 데이터프레임 생성
-                stats_data = []
-                for idx, stats in sorted(st.session_state.practice_stats.items()):
-                    if idx < len(df):
-                        stats_data.append({
-                            "문장 번호": idx + 1,
-                            "영어": df.iloc[idx]['English'],
-                            "청취 횟수": stats['listen_count'],
-                            "마스터": "✓" if idx in st.session_state.mastered_sentences else ""
-                        })
-
-                import pandas as pd
-                stats_df = pd.DataFrame(stats_data)
-                st.dataframe(stats_df, use_container_width=True, height=400)
-            else:
-                st.info("아직 연습 기록이 없습니다.")
-
-        with tab2:
-            st.subheader("세션 기록")
-            display_session_stats()
-
-        with tab3:
-            st.subheader("연습 차트")
-            display_practice_chart()
+    display_transcript_list(df)
 
 
 if __name__ == "__main__":

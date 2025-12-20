@@ -306,10 +306,11 @@ def play_audio_with_stats(text: str, index: int, speed: float = 1.0, autoplay: b
             # 자동 재생되는 숨겨진 오디오 플레이어
             import base64
             import time as time_module
+            import random
             audio_base64 = base64.b64encode(audio_bytes).decode()
 
-            # 고유한 ID 생성 (timestamp 사용)
-            unique_id = f"audio_{int(time_module.time() * 1000)}"
+            # 고유한 ID 생성 (timestamp + random으로 더 확실하게)
+            unique_id = f"audio_{int(time_module.time() * 1000)}_{random.randint(1000, 9999)}"
 
             audio_html = f"""
                 <audio id="{unique_id}" autoplay="true" style="display:none;">
@@ -323,8 +324,9 @@ def play_audio_with_stats(text: str, index: int, speed: float = 1.0, autoplay: b
                 </script>
             """
 
-            # placeholder가 제공되면 그것을 사용, 아니면 새로 생성
+            # placeholder가 제공되면 먼저 비우고 새로 렌더링
             if audio_placeholder is not None:
+                audio_placeholder.empty()
                 audio_placeholder.markdown(audio_html, unsafe_allow_html=True)
             else:
                 st.markdown(audio_html, unsafe_allow_html=True)
@@ -371,6 +373,31 @@ def apply_custom_css(dark_mode: bool = False):
         h1, h2, h3, h4, h5, h6 {
             color: #FFFFFF !important;
         }
+
+        /* Dark mode for sentence card */
+        div[style*="background-color: #f8f9fa"] {
+            background-color: #2a2a2a !important;
+            border-color: #404040 !important;
+        }
+
+        /* Dark mode for transcript list */
+        .transcript-current {
+            background-color: #1e3a5f !important;
+        }
+        .transcript-row:hover {
+            background-color: #2a2a2a !important;
+        }
+        .timestamp {
+            color: #aaa !important;
+        }
+        .badge {
+            background-color: #404040 !important;
+            color: #ccc !important;
+        }
+        .badge-master {
+            background-color: #2e7d32 !important;
+            color: #fff !important;
+        }
         </style>
         """
     else:
@@ -386,64 +413,103 @@ def apply_custom_css(dark_mode: bool = False):
     st.markdown(css, unsafe_allow_html=True)
 
 
-def display_sentence_list(df: pd.DataFrame):
-    """전체 문장 목록을 진행 상황과 함께 표시합니다."""
+def display_transcript_list(df: pd.DataFrame):
+    """Display sentences as media player transcript with timestamps."""
 
-    st.subheader("전체 문장 목록")
+    st.subheader("📝 전체 문장")
 
+    # Transcript styling CSS
+    st.markdown("""
+    <style>
+    .transcript-row {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .transcript-row:hover {
+        background-color: #f5f5f5;
+    }
+    .transcript-current {
+        background-color: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        font-weight: 600;
+    }
+    .timestamp {
+        font-family: monospace;
+        color: #888;
+        font-size: 14px;
+        text-align: right;
+    }
+    .badge {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-size: 11px;
+        margin-left: 6px;
+        background-color: #f0f0f0;
+        color: #666;
+    }
+    .badge-master {
+        background-color: #4caf50;
+        color: white;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Each sentence row
     for idx, row in df.iterrows():
-        # 마스터 여부 및 현재 문장 여부 확인
-        is_mastered = idx in st.session_state.mastered_sentences
         is_current = idx == st.session_state.current_index
-
-        # 통계 가져오기
+        is_mastered = idx in st.session_state.mastered_sentences
         stats = get_sentence_stats(idx)
 
-        # 컬럼 생성
-        col1, col2, col3, col4, col5 = st.columns([0.5, 5, 1, 0.8, 0.8])
+        # Get timestamp
+        if 'Time' in df.columns:
+            time_val = str(df.iloc[idx]['Time'])
+            # Parse "5s", "10s" format
+            if 's' in time_val.lower():
+                seconds = int(time_val.lower().replace('s', ''))
+                timestamp = f"{seconds // 60:02d}:{seconds % 60:02d}"
+            else:
+                timestamp = time_val
+        else:
+            # Sequential: 5 seconds per sentence
+            total_sec = idx * 5
+            timestamp = f"{total_sec // 60:02d}:{total_sec % 60:02d}"
+
+        # 2-column layout: sentence + timestamp
+        col1, col2 = st.columns([6, 1])
 
         with col1:
-            # 인덱스 표시
-            if is_current:
-                st.markdown("**➡️**")
-            else:
-                st.write(f"{idx + 1}")
+            # Build sentence text with badges
+            sentence_text = row['English']
 
-        with col2:
-            # 문장 표시 (마스터 여부에 따라 스타일 변경)
-            if is_mastered:
-                st.markdown(f"<p style='color: green; font-weight: bold;'>{row['English']}</p>",
-                          unsafe_allow_html=True)
-            elif is_current:
-                st.markdown(f"<p style='color: blue; font-weight: bold;'>{row['English']}</p>",
-                          unsafe_allow_html=True)
-            else:
-                st.write(row['English'])
-
-        with col3:
-            # 청취 횟수
-            st.caption(f"🎧 {stats['listen_count']}")
-
-        with col4:
-            # 재생 버튼
-            if st.button("▶️", key=f"play_{idx}"):
-                # 각 재생마다 새로운 컨테이너 사용
-                audio_container = st.container()
-                with audio_container:
-                    audio_placeholder = st.empty()
-                    play_audio_with_stats(
-                        row['English'],
-                        idx,
-                        st.session_state.playback_speed,
-                        autoplay=True,
-                        audio_placeholder=audio_placeholder
-                    )
-
-        with col5:
-            # 이동 버튼
-            if st.button("이동", key=f"goto_{idx}"):
+            # Clickable button
+            if st.button(
+                sentence_text,
+                key=f"transcript_{idx}",
+                use_container_width=True,
+                type="primary" if is_current else "secondary"
+            ):
                 st.session_state.current_index = idx
                 st.rerun()
+
+            # Show badges below button
+            badges_html = ""
+            if is_mastered:
+                badges_html += '<span class="badge badge-master">✓ 마스터</span>'
+            if stats['listen_count'] > 0:
+                badges_html += f'<span class="badge">🎧 {stats["listen_count"]}회</span>'
+
+            if badges_html:
+                st.markdown(badges_html, unsafe_allow_html=True)
+
+        with col2:
+            st.markdown(f'<div class="timestamp">{timestamp}</div>', unsafe_allow_html=True)
+
+        # Add divider except for last row
+        if idx < len(df) - 1:
+            st.markdown('<hr style="margin: 4px 0; border-color: #f0f0f0;">', unsafe_allow_html=True)
 
 
 def display_practice_chart():
