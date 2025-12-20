@@ -11,6 +11,7 @@ from utils import (
     parse_text_input,
     pregenerate_audio,
     play_audio_with_stats_v2,
+    play_audio_with_mediaelement,
 )
 
 
@@ -28,150 +29,243 @@ def main():
     # 세션 초기화
     initialize_session_state()
 
-    # Winamp 스타일 CSS
+    # Modern Player CSS
     st.markdown("""
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- MediaElement.js Core -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mediaelement@7.0.3/build/mediaelementplayer.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/mediaelement@7.0.3/build/mediaelement-and-player.min.js"></script>
+
+    <!-- MediaElement.js Playlist Plugin -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mediaelement-plugins@2.5.1/dist/playlist/playlist.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/mediaelement-plugins@2.5.1/dist/playlist/playlist.min.js"></script>
+
     <style>
+    :root {
+        --primary: #ff4081;
+        --primary-light: #ff79b0;
+        --primary-dark: #c60055;
+        --secondary: #00bcd4;
+        --accent: #ffd740;
+        --bg-dark: #0a0e27;
+        --bg-card: #1a1f3a;
+        --bg-display: #0d1128;
+        --text-primary: #ffffff;
+        --text-secondary: #a0aec0;
+        --text-accent: #64ffda;
+        --glow: rgba(255, 64, 129, 0.4);
+        --shadow: rgba(0, 0, 0, 0.6);
+    }
+
     /* 전체 배경 */
     .stApp {
-        background: #000000 !important;
+        background: linear-gradient(135deg, #0a0e27 0%, #1a1342 100%) !important;
+        font-family: 'Outfit', sans-serif !important;
+    }
+
+    .stApp::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background:
+            radial-gradient(circle at 20% 50%, rgba(255, 64, 129, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(0, 188, 212, 0.1) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: 0;
     }
 
     /* 사이드바 스타일 */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
+        background: var(--bg-card) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
     }
 
-    /* Winamp 메인 플레이어 */
+    /* 메인 플레이어 카드 */
     .winamp-player {
-        background: linear-gradient(180deg, #2a4a6a 0%, #1a2a3a 100%);
-        border: 2px outset #4a6a8a;
-        border-radius: 0;
-        padding: 0;
-        margin: 20px auto;
-        max-width: 900px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.8);
-        font-family: 'Tahoma', 'Arial', sans-serif;
+        background: var(--bg-card);
+        border-radius: 24px;
+        padding: 32px;
+        box-shadow:
+            0 20px 60px var(--shadow),
+            0 0 0 1px rgba(255, 255, 255, 0.05),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px);
+        position: relative;
+        overflow: hidden;
+        animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .winamp-player::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        animation: shimmer 3s linear infinite;
+    }
+
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     /* 플레이어 헤더 */
     .winamp-header {
-        background: linear-gradient(180deg, #4a6a8a 0%, #2a4a6a 100%);
-        padding: 4px 8px;
-        border-bottom: 1px solid #1a2a3a;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        margin-bottom: 24px;
     }
 
     .winamp-title {
-        color: #ffffff;
-        font-size: 11px;
-        font-weight: bold;
-        text-shadow: 1px 1px 0px rgba(0,0,0,0.5);
+        font-size: 14px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--text-accent);
+        font-family: 'JetBrains Mono', monospace;
     }
 
     /* 디스플레이 영역 */
     .winamp-display {
-        background: #000000;
-        border: 2px inset #1a2a3a;
-        margin: 8px;
-        padding: 20px 15px;
-        min-height: 100px;
+        background: var(--bg-display);
+        border-radius: 16px;
+        padding: 28px;
+        margin-bottom: 24px;
+        box-shadow:
+            inset 0 4px 12px rgba(0, 0, 0, 0.5),
+            0 1px 0 rgba(255, 255, 255, 0.05);
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .winamp-display::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, transparent 0%, rgba(255, 64, 129, 0.05) 100%);
+        pointer-events: none;
     }
 
     .winamp-time {
-        color: #00ff00;
-        font-family: 'Courier New', monospace;
-        font-size: 32px;
-        font-weight: bold;
-        text-shadow: 0 0 8px rgba(0, 255, 0, 0.8);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 48px;
+        font-weight: 700;
+        color: var(--primary);
+        text-align: center;
+        margin-bottom: 24px;
+        text-shadow:
+            0 0 20px var(--glow),
+            0 0 40px var(--glow);
         letter-spacing: 4px;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
     }
 
     .winamp-text {
-        color: #00ff00;
-        font-family: 'Courier New', monospace;
-        font-size: 28px;
-        text-shadow: 0 0 4px rgba(0, 255, 0, 0.6);
-        margin-top: 12px;
-        font-weight: bold;
+        font-size: 20px;
+        line-height: 1.6;
+        color: var(--text-primary);
+        text-align: center;
+        margin-bottom: 16px;
+        font-weight: 400;
+        animation: fadeIn 0.6s ease-out;
     }
 
     .winamp-text-korean {
-        color: #00aaff;
-        font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
-        font-size: 18px;
-        text-shadow: 0 0 4px rgba(0, 170, 255, 0.6);
-        margin-top: 8px;
+        font-size: 16px;
+        line-height: 1.6;
+        color: var(--text-secondary);
+        text-align: center;
+        font-weight: 300;
+        animation: fadeIn 0.8s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Winamp 컨트롤 패널 - 숨김 */
+    .winamp-controls {
+        display: none;
     }
 
     /* 비주얼라이저 */
     .visualizer {
-        background: #000000;
-        border: 2px inset #1a2a3a;
-        margin: 0 8px 8px 8px;
-        padding: 12px 8px;
-        height: 80px;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
         display: flex;
         align-items: flex-end;
         justify-content: center;
-        gap: 2px;
+        gap: 3px;
+        padding: 0 32px 12px;
+        opacity: 0.3;
     }
 
     .viz-bar {
         width: 4px;
-        background: linear-gradient(180deg, #00ff00 0%, #00aa00 100%);
-        border: 1px solid #00ff00;
-        box-shadow: 0 0 4px rgba(0, 255, 0, 0.6);
-        animation: vizPulse 0.8s ease-in-out infinite;
+        background: linear-gradient(to top, var(--primary), var(--secondary));
+        border-radius: 2px 2px 0 0;
+        animation: wave 1.5s ease-in-out infinite;
     }
 
-    @keyframes vizPulse {
-        0%, 100% { transform: scaleY(0.3); opacity: 0.6; }
-        50% { transform: scaleY(1); opacity: 1; }
+    .viz-bar:nth-child(1) { animation-delay: 0s; height: 20%; }
+    .viz-bar:nth-child(2) { animation-delay: 0.1s; height: 35%; }
+    .viz-bar:nth-child(3) { animation-delay: 0.2s; height: 50%; }
+    .viz-bar:nth-child(4) { animation-delay: 0.3s; height: 70%; }
+    .viz-bar:nth-child(5) { animation-delay: 0.4s; height: 85%; }
+    .viz-bar:nth-child(6) { animation-delay: 0.5s; height: 70%; }
+    .viz-bar:nth-child(7) { animation-delay: 0.6s; height: 50%; }
+    .viz-bar:nth-child(8) { animation-delay: 0.7s; height: 35%; }
+    .viz-bar:nth-child(9) { animation-delay: 0.8s; height: 20%; }
+
+    @keyframes wave {
+        0%, 100% { transform: scaleY(1); }
+        50% { transform: scaleY(1.5); }
     }
 
-    /* Winamp 컨트롤 패널 */
-    .winamp-controls {
-        background: linear-gradient(180deg, #2a4a6a 0%, #1a2a3a 100%);
-        padding: 12px 20px;
-        border-top: 1px solid #4a6a8a;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 6px;
-    }
-
+    /* 버튼 컨테이너 */
     .winamp-btn {
-        background: linear-gradient(180deg, #4a6a8a 0%, #2a4a6a 100%);
-        border: 2px outset #5a7a9a;
-        border-radius: 3px;
-        color: #ffffff;
-        font-family: 'Tahoma', sans-serif;
-        font-size: 18px;
-        font-weight: bold;
-        width: 50px;
-        height: 40px;
-        cursor: pointer;
-        text-shadow: 1px 1px 0px rgba(0,0,0,0.5);
-        transition: all 0.05s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .winamp-btn:hover {
-        background: linear-gradient(180deg, #5a7a9a 0%, #3a5a7a 100%);
-        border-color: #6a8aaa;
-    }
-
-    .winamp-btn:active {
-        border-style: inset;
-        background: linear-gradient(180deg, #3a5a7a 0%, #2a4a6a 100%);
-    }
-
-    .winamp-btn-play {
-        background: linear-gradient(180deg, #00aa00 0%, #008800 100%);
+        display: none;
         border-color: #00cc00;
         width: 60px;
         height: 50px;
@@ -237,53 +331,58 @@ def main():
         float: right;
     }
 
-    /* 버튼 스타일 - Winamp 컨트롤용 */
+    /* 버튼 스타일 - 모던 컨트롤 */
     .winamp-controls-container .stButton > button {
-        background: linear-gradient(180deg, #4a6a8a 0%, #2a4a6a 100%) !important;
-        border: 2px outset #5a7a9a !important;
-        border-radius: 3px !important;
-        color: #ffffff !important;
-        font-family: 'Tahoma', 'Arial', sans-serif !important;
+        width: 56px !important;
+        height: 56px !important;
+        border-radius: 50% !important;
+        border: none !important;
+        background: var(--bg-display) !important;
+        color: var(--text-primary) !important;
         font-size: 20px !important;
-        font-weight: bold !important;
-        text-shadow: 1px 1px 0px rgba(0,0,0,0.5) !important;
-        padding: 8px 16px !important;
-        min-width: 60px !important;
-        height: 50px !important;
-        transition: all 0.05s !important;
+        cursor: pointer !important;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        box-shadow:
+            0 4px 12px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        position: relative !important;
+        overflow: hidden !important;
     }
 
     .winamp-controls-container .stButton > button:hover {
-        background: linear-gradient(180deg, #5a7a9a 0%, #3a5a7a 100%) !important;
-        border: 2px outset #6a8aaa !important;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.5) !important;
+        transform: translateY(-2px) scale(1.05) !important;
+        box-shadow:
+            0 8px 24px rgba(0, 0, 0, 0.5),
+            0 0 0 2px var(--primary),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
     }
 
     .winamp-controls-container .stButton > button:active {
-        border: 2px inset #3a5a7a !important;
-        background: linear-gradient(180deg, #3a5a7a 0%, #2a4a6a 100%) !important;
-        transform: translateY(1px);
-        box-shadow: none !important;
+        transform: translateY(0) scale(0.98) !important;
     }
 
-    /* 재생 버튼 특별 스타일 */
-    .winamp-controls-container div[data-testid="column"]:nth-child(3) .stButton > button {
-        background: linear-gradient(180deg, #00aa00 0%, #008800 100%) !important;
-        border: 2px outset #00cc00 !important;
-        min-width: 80px !important;
-        height: 60px !important;
-        font-size: 28px !important;
+    /* 재생 버튼 특별 스타일 - 핑크 그라디언트 */
+    .winamp-controls-container div[data-testid="column"]:nth-child(2) .stButton > button,
+    .winamp-controls-container div[data-testid="column"]:nth-child(2) .stButton > button[kind="primary"] {
+        width: 72px !important;
+        height: 72px !important;
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+        font-size: 24px !important;
+        box-shadow:
+            0 8px 24px var(--glow),
+            0 4px 12px rgba(0, 0, 0, 0.4) !important;
     }
 
-    .winamp-controls-container div[data-testid="column"]:nth-child(3) .stButton > button:hover {
-        background: linear-gradient(180deg, #00cc00 0%, #00aa00 100%) !important;
-        border: 2px outset #00ff00 !important;
-    }
-
-    .winamp-controls-container div[data-testid="column"]:nth-child(3) .stButton > button:active {
-        background: linear-gradient(180deg, #008800 0%, #006600 100%) !important;
-        border: 2px inset #00aa00 !important;
+    .winamp-controls-container div[data-testid="column"]:nth-child(2) .stButton > button:hover,
+    .winamp-controls-container div[data-testid="column"]:nth-child(2) .stButton > button[kind="primary"]:hover {
+        box-shadow:
+            0 12px 32px var(--glow),
+            0 0 0 3px rgba(255, 64, 129, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+        transform: translateY(-3px) scale(1.08) !important;
     }
 
     /* 사이드바 버튼 스타일 */
@@ -355,6 +454,216 @@ def main():
     /* 컬럼 간격 조정 */
     .winamp-controls-container div[data-testid="column"] {
         padding: 0 5px !important;
+    }
+
+    /* Two-column layout for player and playlist */
+    .player-playlist-container {
+        display: flex;
+        gap: 20px;
+        margin: 20px auto;
+        max-width: 1400px;
+    }
+
+    .player-section {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .playlist-section {
+        width: 450px;
+        flex-shrink: 0;
+    }
+
+    @media (max-width: 1024px) {
+        .player-playlist-container {
+            flex-direction: column;
+        }
+        .playlist-section {
+            width: 100%;
+        }
+    }
+
+    /* MediaElement.js Player Styling - Winamp Theme */
+    .mejs__container {
+        background: linear-gradient(180deg, #2a4a6a 0%, #1a2a3a 100%) !important;
+        border: 2px outset #4a6a8a !important;
+        border-radius: 0 !important;
+        margin: 10px 0 !important;
+        font-family: 'Courier New', monospace !important;
+    }
+
+    .mejs__controls {
+        background: linear-gradient(180deg, #2a4a6a 0%, #1a2a3a 100%) !important;
+        border-top: 1px solid #4a6a8a !important;
+    }
+
+    .mejs__button button {
+        background: linear-gradient(180deg, #4a6a8a 0%, #2a4a6a 100%) !important;
+        border: 1px outset #5a7a9a !important;
+        color: #00ff00 !important;
+    }
+
+    .mejs__button button:hover {
+        background: linear-gradient(180deg, #5a7a9a 0%, #3a5a7a 100%) !important;
+    }
+
+    .mejs__time {
+        color: #00ff00 !important;
+        font-family: 'Courier New', monospace !important;
+        text-shadow: 0 0 4px rgba(0, 255, 0, 0.6) !important;
+    }
+
+    .mejs__time-rail .mejs__time-total {
+        background: #1a2a3a !important;
+    }
+
+    .mejs__time-rail .mejs__time-current {
+        background: #00ff00 !important;
+    }
+
+    .mejs__volume-current {
+        background: #00ff00 !important;
+    }
+
+    /* MediaElement.js Playlist Styling */
+    .mejs__playlist {
+        background: #000000 !important;
+        border: 2px inset #1a2a3a !important;
+        max-height: 500px !important;
+        overflow-y: auto !important;
+        font-family: 'Courier New', monospace !important;
+    }
+
+    .mejs__playlist-item {
+        color: #00ff00 !important;
+        font-size: 13px !important;
+        padding: 10px 12px !important;
+        border-left: 3px solid transparent !important;
+        border-bottom: 1px solid #1a2a3a !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .mejs__playlist-item:hover {
+        background: rgba(0, 255, 0, 0.1) !important;
+        border-left: 3px solid #00ff00 !important;
+    }
+
+    .mejs__playlist-current {
+        background: rgba(0, 255, 0, 0.2) !important;
+        border-left: 3px solid #00ff00 !important;
+        font-weight: bold !important;
+    }
+
+    .mejs__playlist-title {
+        color: #00ff00 !important;
+        text-shadow: 0 0 4px rgba(0, 255, 0, 0.6) !important;
+    }
+
+    .mejs__playlist-description {
+        color: #00aaff !important;
+        font-size: 11px !important;
+        margin-top: 4px !important;
+    }
+
+    /* Playlist 컨테이너 스타일 */
+    [data-testid="column"]:has(.mejs__playlist) {
+        padding: 0 !important;
+    }
+
+    /* Playlist button styling - 모던 테마 */
+    [data-testid="column"]:has(.mejs__playlist) .stButton > button,
+    [data-testid="column"]:has(.mejs__playlist) .stButton > button[kind="secondary"] {
+        background: var(--bg-display) !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-left: 3px solid transparent !important;
+        color: var(--text-primary) !important;
+        font-family: 'Outfit', sans-serif !important;
+        font-size: 13px !important;
+        text-align: left !important;
+        padding: 12px 16px !important;
+        margin: 0 !important;
+        border-radius: 8px !important;
+        transition: all 0.3s ease !important;
+        height: auto !important;
+        min-height: 48px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    [data-testid="column"]:has(.mejs__playlist) .stButton > button:hover,
+    [data-testid="column"]:has(.mejs__playlist) .stButton > button[kind="secondary"]:hover {
+        background: rgba(255, 64, 129, 0.1) !important;
+        border-left: 3px solid var(--primary) !important;
+        color: var(--text-primary) !important;
+        transform: translateX(4px) !important;
+    }
+
+    /* 현재 재생 중인 항목 - 핑크 그라디언트 */
+    [data-testid="column"]:has(.mejs__playlist) .stButton > button[kind="primary"] {
+        background: linear-gradient(90deg, rgba(255, 64, 129, 0.2), rgba(255, 64, 129, 0.1)) !important;
+        border: 1px solid rgba(255, 64, 129, 0.3) !important;
+        border-left: 3px solid var(--primary) !important;
+        color: var(--text-accent) !important;
+        font-weight: 600 !important;
+        text-shadow: 0 0 10px rgba(255, 64, 129, 0.5) !important;
+    }
+
+    [data-testid="column"]:has(.mejs__playlist) .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(90deg, rgba(255, 64, 129, 0.3), rgba(255, 64, 129, 0.15)) !important;
+        color: var(--text-accent) !important;
+        transform: translateX(4px) !important;
+    }
+
+    /* Remove gap between playlist buttons */
+    [data-testid="column"]:has(.mejs__playlist) .element-container {
+        margin-bottom: 0 !important;
+    }
+
+    [data-testid="column"]:has(.mejs__playlist) .stButton {
+        margin-bottom: 0 !important;
+    }
+
+    /* Playlist 스크롤바 스타일 */
+    .mejs__playlist::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .mejs__playlist::-webkit-scrollbar-track {
+        background: #1a2a3a;
+    }
+
+    .mejs__playlist::-webkit-scrollbar-thumb {
+        background: #00ff00;
+        border-radius: 4px;
+    }
+
+    .mejs__playlist::-webkit-scrollbar-thumb:hover {
+        background: #00cc00;
+    }
+
+    /* 오디오 플레이어 숨기기 - 빈 박스 제거 */
+    .winamp-player audio {
+        display: none !important;
+    }
+
+    /* 빈 요소 숨기기 */
+    .element-container:has(> .stMarkdown:empty) {
+        display: none !important;
+    }
+
+    .element-container:has(audio) {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* 오디오 컨트롤을 완전히 숨김 */
+    audio {
+        position: absolute !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        width: 0 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -491,102 +800,136 @@ def main():
 
     current_sentence = df.iloc[current_idx]
 
-    # Winamp 플레이어
-    st.markdown('<div class="winamp-player">', unsafe_allow_html=True)
+    # Create two-column layout using Streamlit columns
+    col_player, col_playlist = st.columns([2, 1], gap="medium")
 
-    # 헤더
-    st.markdown(f'<div class="winamp-header"><span class="winamp-title">ENGLISH PRACTICE PLAYER</span><span class="winamp-title">{current_idx + 1} of {len(df)}</span></div>', unsafe_allow_html=True)
+    # ========== LEFT COLUMN: Player Section ==========
+    with col_player:
+        # Winamp 플레이어
+        st.markdown('<div class="winamp-player">', unsafe_allow_html=True)
 
-    # 디스플레이
-    st.markdown('<div class="winamp-display">', unsafe_allow_html=True)
+        # 헤더
+        st.markdown(f'<div class="winamp-header"><span class="winamp-title">ENGLISH PRACTICE PLAYER</span><span class="winamp-title">{current_idx + 1} of {len(df)}</span></div>', unsafe_allow_html=True)
 
-    # 현재 문장의 오디오 길이 표시
-    if current_idx in st.session_state.audio_durations:
-        duration_sec = int(st.session_state.audio_durations[current_idx])
-        time_display = f"{duration_sec // 60:02d}:{duration_sec % 60:02d}"
-    else:
-        time_display = "00:00"
+        # 디스플레이
+        st.markdown('<div class="winamp-display">', unsafe_allow_html=True)
 
-    st.markdown(f'<div class="winamp-time">{time_display}</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="winamp-text">{current_sentence["English"]}</div>', unsafe_allow_html=True)
-    if current_sentence['Korean']:
-        st.markdown(f'<div class="winamp-text-korean">{current_sentence["Korean"]}</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # 비주얼라이저 - 랜덤 높이로 동적 변화
-    import random
-    heights = [random.randint(10, 70) for _ in range(40)]
-    viz_bars = ''.join([f'<div class="viz-bar" style="height: {h}px; animation-delay: {i*0.05}s;"></div>' for i, h in enumerate(heights)])
-    st.markdown(f'<div class="visualizer">{viz_bars}</div>', unsafe_allow_html=True)
-
-    # Winamp 컨트롤 패널 시작
-    st.markdown('<div class="winamp-controls">', unsafe_allow_html=True)
-    st.markdown('</div></div>', unsafe_allow_html=True)
-
-    # MediaElement.js 플레이어
-    audio_placeholder = st.empty()
-
-    # Winamp 스타일 버튼 컨테이너
-    st.markdown('<div class="winamp-controls-container">', unsafe_allow_html=True)
-
-    col1, col2, col3, col4, col5 = st.columns([1, 1, 1.5, 1, 1])
-
-    with col1:
-        if st.button("⏮", use_container_width=True, help="이전 문장"):
-            if st.session_state.current_index > 0:
-                st.session_state.current_index -= 1
-            else:
-                st.session_state.current_index = len(df) - 1
-            st.rerun()
-
-    with col2:
-        if st.button("⏪", use_container_width=True, help="처음으로"):
-            st.session_state.current_index = 0
-            st.rerun()
-
-    with col3:
-        if st.button("▶️", use_container_width=True, help="재생", type="primary"):
-            play_audio_with_stats_v2(
-                current_sentence['English'],
-                current_idx,
-                st.session_state.playback_speed,
-                audio_placeholder
-            )
-
-    with col4:
-        if st.button("⏩", use_container_width=True, help="마지막으로"):
-            st.session_state.current_index = len(df) - 1
-            st.rerun()
-
-    with col5:
-        if st.button("⏭", use_container_width=True, help="다음 문장"):
-            st.session_state.current_index = (st.session_state.current_index + 1) % len(df)
-            st.rerun()
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.divider()
-
-    # Winamp 플레이리스트
-    st.markdown('<div class="winamp-playlist">', unsafe_allow_html=True)
-    st.markdown(f'<div class="playlist-header">PLAYLIST - {len(df)} SENTENCES</div>', unsafe_allow_html=True)
-    st.markdown('<div class="playlist-content">', unsafe_allow_html=True)
-
-    for idx, row in df.iterrows():
-        is_current = idx == st.session_state.current_index
-        item_class = "playlist-item-current" if is_current else "playlist-item"
-
-        # 실제 오디오 길이로 시간 계산
-        if idx in st.session_state.audio_durations:
-            duration_sec = int(st.session_state.audio_durations[idx])
-            timestamp = f"{duration_sec // 60:02d}:{duration_sec % 60:02d}"
+        # 현재 문장의 오디오 길이 표시
+        if current_idx in st.session_state.audio_durations:
+            duration_sec = int(st.session_state.audio_durations[current_idx])
+            time_display = f"{duration_sec // 60:02d}:{duration_sec % 60:02d}"
         else:
-            timestamp = "00:00"
+            time_display = "00:00"
 
-        sentence_html = f'<div class="{item_class}">{idx + 1}. {row["English"]}<span class="playlist-time">{timestamp}</span></div>'
-        st.markdown(sentence_html, unsafe_allow_html=True)
+        st.markdown(f'<div class="winamp-time">{time_display}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="winamp-text">{current_sentence["English"]}</div>', unsafe_allow_html=True)
+        if current_sentence['Korean']:
+            st.markdown(f'<div class="winamp-text-korean">{current_sentence["Korean"]}</div>', unsafe_allow_html=True)
 
-    st.markdown('</div></div>', unsafe_allow_html=True)
+        # 비주얼라이저 추가
+        visualizer_html = '''
+        <div class="visualizer">
+            <div class="viz-bar"></div>
+            <div class="viz-bar"></div>
+            <div class="viz-bar"></div>
+            <div class="viz-bar"></div>
+            <div class="viz-bar"></div>
+            <div class="viz-bar"></div>
+            <div class="viz-bar"></div>
+            <div class="viz-bar"></div>
+            <div class="viz-bar"></div>
+        </div>
+        '''
+        st.markdown(visualizer_html, unsafe_allow_html=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Winamp 컨트롤 패널 시작
+        st.markdown('<div class="winamp-controls">', unsafe_allow_html=True)
+        st.markdown('</div></div>', unsafe_allow_html=True)
+
+        # MediaElement.js 플레이어
+        audio_placeholder = st.empty()
+
+        # Winamp 스타일 버튼 컨테이너
+        st.markdown('<div class="winamp-controls-container">', unsafe_allow_html=True)
+
+        btn_col1, btn_col2, btn_col3 = st.columns([1, 1.5, 1])
+
+        with btn_col1:
+            if st.button("⏮", use_container_width=True, help="이전 문장"):
+                if st.session_state.current_index > 0:
+                    st.session_state.current_index -= 1
+                else:
+                    st.session_state.current_index = len(df) - 1
+                st.rerun()
+
+        with btn_col2:
+            if st.button("▶️", use_container_width=True, help="재생", type="primary"):
+                play_audio_with_stats_v2(
+                    current_sentence['English'],
+                    current_idx,
+                    st.session_state.playback_speed,
+                    audio_placeholder
+                )
+
+        with btn_col3:
+            if st.button("⏭", use_container_width=True, help="다음 문장"):
+                st.session_state.current_index = (st.session_state.current_index + 1) % len(df)
+                st.rerun()
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ========== RIGHT COLUMN: Playlist Section ==========
+    with col_playlist:
+        # Playlist header
+        st.markdown(f'''
+        <div style="background: var(--bg-card); border-radius: 16px 16px 0 0; padding: 16px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); margin-top: 10px;">
+            <div style="color: var(--text-accent); font-weight: 700; font-family: 'JetBrains Mono', monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">
+                PLAYLIST • {len(df)} TRACKS
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
+
+        # Create scrollable container for playlist items
+        st.markdown('<div class="mejs__playlist" style="max-height: 500px; overflow-y: auto; margin-top: 0; padding: 0;">', unsafe_allow_html=True)
+
+        # Display each sentence as a clickable item
+        for idx, row in df.iterrows():
+            is_current = idx == st.session_state.current_index
+
+            # Get duration
+            if idx in st.session_state.audio_durations:
+                duration_sec = int(st.session_state.audio_durations[idx])
+                timestamp = f"{duration_sec // 60:02d}:{duration_sec % 60:02d}"
+            else:
+                timestamp = "00:00"
+
+            # Create button label with sentence info
+            english_text = row["English"]
+            korean_text = row.get("Korean", "")
+
+            # Truncate if too long
+            if len(english_text) > 50:
+                display_english = english_text[:47] + "..."
+            else:
+                display_english = english_text
+
+            button_label = f"{idx + 1}. {display_english}"
+
+            # Create clickable button
+            button_type = "primary" if is_current else "secondary"
+            if st.button(
+                button_label,
+                key=f"playlist_{idx}",
+                help=f"{english_text}\n{korean_text}\n[{timestamp}]",
+                use_container_width=True,
+                type=button_type
+            ):
+                st.session_state.current_index = idx
+                st.rerun()
+
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
